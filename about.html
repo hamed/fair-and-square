@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hamed Seyed-Allaei — Fair and Square</title>
+    <meta name="description" content="Physicist. I build models you can play with." />
+    <link rel="stylesheet" href="./about.css" />
+  </head>
+  <body>
+    <!-- About (owner, 2026-10-22, fourth round): his own words; the gift right after them, with the five of us and
+         our drinks; then each clip (Learn's own, scripts/about-clips.mjs) beside the formula it draws, typeset by LaTeX
+         (scripts/about-math.mjs); one light line on the work; the links as squares, two columns. Nothing asks for work
+         directly. Each <section> stands alone. -->
+    <main class="wide">
+      <!-- the lockup, as the stage's title: "fair&" and the game's square in place of the word, live (stage/about/lockup.ts);
+           its name in words for everyone else; English in every language -->
+      <p class="mark"><a href="./" aria-label="Fair and Square">fair<span class="amp">&amp;</span><canvas aria-hidden="true"></canvas></a></p>
+
+      <header class="col">
+        <h1>Hamed <span class="together">Seyed-Allaei <span data-sq data-act="follow" data-feel="amused" data-size="1.1" aria-hidden="true"></span></span></h1>
+        <p class="kicker">Physicist. I build models you can play with.</p>
+      </header>
+
+      <section id="hello" class="col">
+        <p class="hello">
+          Hi, I'm Hamed, a physicist. I love little simple things that have huge, unexpected impacts, and I love to
+          share them with the world, like this simple little fair game and its surprising results.
+        </p>
+      </section>
+
+      <!-- the gift: Hamed's own words; the five of us, with our drinks; two ways to give, each a square -->
+      <section id="gift" class="col">
+        <p class="hello">
+          If you think “fair and square” makes our world a slightly better place to live, a small gift warms my heart,
+          and big ones warm my home. Both encourage me to do more.
+        </p>
+        <div class="gifts">
+          <span data-sq="party" data-colours="blue|red|green|teal|violet" data-heights="1|0.93|0.86|0.67|0.63" data-drinks="coffee|coffee|cocoa|cocoa|cocoa" data-size="3" aria-hidden="true"></span>
+          <ul class="give">
+            <li>
+              <a href="https://ko-fi.com/P5P1S2R6S" target="_blank" rel="noopener">
+                <span data-sq data-colour="blue" data-feel="glad" data-logo="kofi" data-size="2.4" aria-hidden="true"></span>
+                <span class="name">Ko-fi</span>
+              </a>
+            </li>
+            <li>
+              <a href="https://paypal.me/hamedallaei" target="_blank" rel="noopener">
+                <span data-sq data-colour="teal" data-feel="shy" data-logo="paypal" data-size="2.4" aria-hidden="true"></span>
+                <span class="name">PayPal</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- each clip, and beside it the formula it draws: nothing more than what is in the picture -->
+      <section id="pictures" aria-label="Three measures, drawn by the squares">
+        <figure class="row">
+          <video class="clip" data-clip muted loop playsinline preload="metadata" poster="about/stairs.jpg" aria-label="Four squares line up, become a tower, then stairs; a curve runs through their corners and a gauge fills to the Gini">
+            <source src="about/stairs.webm" type="video/webm" />
+            <source src="about/stairs.mp4" type="video/mp4" />
+          </video>
+          <figcaption>
+            <img class="tex" src="about/math/gini.svg" alt="G equals the integral from 0 to 1 of p minus L of p, over the integral from 0 to 1 of p" />
+            <p><b>The Gini.</b> The squares line up, poorest first, and pull out into stairs; the curve through their corners is L. The area between the straight line and the curve, over the area under the line.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="row">
+          <video class="clip" data-clip muted loop playsinline preload="metadata" poster="about/box.jpg" aria-label="Squares take sides equal to their shares, pack into the box, and the box is copied: about three copies fit">
+            <source src="about/box.webm" type="video/webm" />
+            <source src="about/box.mp4" type="video/mp4" />
+          </video>
+          <figcaption>
+            <img class="tex" src="about/math/neff.svg" alt="N eff equals 1 over the sum of s i squared" />
+            <p><b>The effective number.</b> Each square's side is its share, s<sub>i</sub>. The box holds about three copies of the pile: as concentrated as three equal squares.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="row">
+          <video class="clip" data-clip muted loop playsinline preload="metadata" poster="about/bars.jpg" aria-label="Squares become bars of one height, stack against the wall, and a sliding line counts how many reach it">
+            <source src="about/bars.webm" type="video/webm" />
+            <source src="about/bars.mp4" type="video/mp4" />
+          </video>
+          <figcaption>
+            <img class="tex" src="about/math/ccdf.svg" alt="N of w equals the number of i with w i at least w" />
+            <p><b>Who has at least.</b> Everyone becomes a bar, longer on a log scale the more they have. Slide the line: N(w) counts the bars that reach it.</p>
+          </figcaption>
+        </figure>
+      </section>
+
+      <!-- the work, said once and lightly; the squares below are where to find me -->
+      <section id="play" class="col">
+        <p class="hello">I build models you can play with. Would you like me to play with yours?</p>
+        <p class="what">Behind these squares: physics, neuroscience, years of teaching, data science, machine learning and AI.</p>
+      </section>
+
+      <section id="elsewhere" class="col">
+        <ul class="links">
+          <li>
+            <span data-sq data-feel="annoyed" data-logo="x" data-act="huff" data-size="2.3" aria-hidden="true"></span>
+            <span class="line"><a href="https://x.com/allaei" target="_blank" rel="noopener">X</a><span class="what">a place for angry squares</span></span>
+          </li>
+          <li>
+            <span data-sq data-feel="smug" data-logo="linkedin" data-size="2.3" aria-hidden="true"></span>
+            <span class="line"><a href="https://www.linkedin.com/in/allaei/" target="_blank" rel="noopener">LinkedIn</a><span class="what">for serious squares</span></span>
+          </li>
+          <li>
+            <span data-sq data-feel="glad" data-logo="instagram" data-act="flash" data-size="2.3" aria-hidden="true"></span>
+            <span class="line"><a href="https://www.instagram.com/hamed.allaei/" target="_blank" rel="noopener">Instagram</a><span class="what">for beautiful squares</span></span>
+          </li>
+          <li>
+            <span data-sq data-feel="amused" data-logo="tiktok" data-act="dance" data-size="2.3" aria-hidden="true"></span>
+            <span class="line"><a href="https://www.tiktok.com/@hamed.allaei" target="_blank" rel="noopener">TikTok</a><span class="what">for moving squares</span></span>
+          </li>
+          <li>
+            <span data-sq data-feel="calm" data-logo="youtube" data-size="2.3" aria-hidden="true"></span>
+            <span class="line"><a href="https://www.youtube.com/@allaei" target="_blank" rel="noopener">YouTube</a><span class="what">for squares on screen</span></span>
+          </li>
+          <li>
+            <span data-sq data-feel="curious" data-logo="github" data-size="2.3" aria-hidden="true"></span>
+            <span class="line"><a href="https://github.com/hamed" target="_blank" rel="noopener">GitHub</a><span class="what">for curious squares</span></span>
+          </li>
+          <li>
+            <span data-sq data-colour="green" data-feel="calm" data-act="read" data-size="2.3" aria-hidden="true"></span>
+            <span class="line"><a href="https://a.co/d/0gqnToGJ" target="_blank" rel="noopener sponsored">Books</a><span class="what">for squares who read</span></span>
+          </li>
+        </ul>
+        <p class="disclose">As an Amazon Associate I earn from qualifying purchases.</p>
+      </section>
+
+      <footer class="foot col">
+        <p><a href="making-of.html">How Fair and Square was made →</a></p>
+        <p id="thanks">
+          Thanks. The model is not mine: Anirban Chakraborti wrote it down and Brian Hayes named it the yard-sale model,
+          both in 2002; Bruce Boghosian and colleagues worked out its equations
+          (<a href="https://arxiv.org/abs/1407.6851" target="_blank" rel="noopener">2014</a>,
+          <a href="https://arxiv.org/abs/1412.7227" target="_blank" rel="noopener">2015</a>); Christoph Börgers and Claude
+          Greengard <a href="https://arxiv.org/abs/2308.01485" target="_blank" rel="noopener">proved</a> that, under its
+          basic rules, one share approaches everything. Learn's last question, choosing a yard before you know which
+          square you'll be, is John Rawls's veil of ignorance. The faces' moods sit on James Russell's
+          <a href="https://doi.org/10.1037/h0077714" target="_blank" rel="noopener">map of feelings</a>. The letters are
+          Gelasio, by Eben Sorkin, and Vazirmatn, by Saber Rastikerdar; Build's blocks are Blockly. This game's pictures,
+          play and code are mine, written with help from AI coding assistants.
+        </p>
+        <p class="back"><a href="./">← Back to the yard</a> <span class="what">· We play fair. #FairAndSquare</span></p>
+      </footer>
+    </main>
+    <script type="module" src="./stage/about/main.ts"></script>
+  </body>
+</html>

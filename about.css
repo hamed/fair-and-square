@@ -1,0 +1,731 @@
+/* the about page: the stage's paper and ink, its two faces (OFL, stage/fonts): Gelasio for character (the mark,
+   the name), Vazirmatn for what is read */
+@font-face {
+  font-family: 'Gelasio';
+  src: url('./stage/fonts/Gelasio.ttf') format('truetype');
+  font-weight: 400 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('./stage/fonts/Vazirmatn.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+
+:root {
+  --paper: #f4efe4;
+  --ink: #28251f;
+  /* informational text: 5.1:1 on the paper (review 2026-10-22, 2: #7a7262 was 4.15) */
+  --muted: #6b6455;
+  --amp: #958c7b;
+  color-scheme: light;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 18px/1.6 'Vazirmatn', system-ui, sans-serif;
+}
+
+main {
+  max-inline-size: 36rem;
+  margin-inline: auto;
+  padding: 12vh 16px 64px;
+}
+
+.mark,
+h1 {
+  font-family: 'Gelasio', Georgia, serif;
+}
+
+.mark {
+  margin: 0;
+  font-weight: 700;
+  font-size: 2rem;
+  color: var(--ink);
+}
+
+.amp {
+  color: var(--amp);
+}
+
+/* the lockup's square, in place of the word (stage/about/lockup.ts sizes it to the serif's cap height × 1.2, as the
+   stage's title): a hair after the &, standing on the baseline */
+.mark canvas {
+  display: inline-block;
+  inline-size: 0.84em;
+  block-size: 0.84em;
+  margin-inline-start: 0.05em;
+  vertical-align: baseline;
+}
+
+h1 {
+  margin: 2.5rem 0 1rem;
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.2;
+  color: var(--muted);
+}
+
+/* the line under the name: what I do, and the way to the one ask */
+.kicker {
+  margin: -0.5rem 0 1.5rem;
+  color: var(--muted);
+}
+
+.kicker a {
+  color: #4d271c;
+  white-space: nowrap;
+}
+
+h2 {
+  margin: 2.5rem 0 0.25rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+a {
+  color: inherit;
+}
+
+.mark a {
+  text-decoration: none;
+}
+
+/* a square in the text (stage/about): the gap it stands in; its canvas is larger, for hops, and lets the pointer through */
+[data-sq] {
+  position: relative;
+  display: inline-block;
+  vertical-align: -0.12em;
+  cursor: pointer;
+}
+
+[data-sq] > canvas,
+.photo > canvas {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  pointer-events: none;
+}
+
+.together {
+  white-space: nowrap;
+}
+
+h1 [data-sq] {
+  margin-inline-start: 0.15em;
+  vertical-align: -0.08em;
+}
+
+/* the family: a row of squares on the text's column, the button and what happened under it */
+.family {
+  margin: 1.25rem 0 0.5rem;
+}
+
+.photo {
+  position: relative;
+  block-size: 140px;
+}
+
+.family figcaption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  text-align: center;
+}
+
+.play {
+  font: inherit;
+  font-size: 0.9rem;
+  color: #4d271c;
+  background: #fbf8f1;
+  border: 1px solid #b9b09c;
+  border-radius: 3px;
+  padding-block: 0.2em;
+  padding-inline: 0.9em;
+  cursor: pointer;
+}
+
+.play:hover {
+  border-color: #4d271c;
+}
+
+.result {
+  min-block-size: 1.5em;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* the ask: a short list, small squares for bullets */
+.ladder {
+  display: grid;
+  gap: 0.45rem;
+  margin: 1.25rem 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.ladder li {
+  position: relative;
+  padding-inline-start: 1.3em;
+}
+
+.ladder li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0.15em;
+  inset-block-start: 0.55em;
+  inline-size: 0.45em;
+  block-size: 0.45em;
+  border: 1px solid #b9b09c;
+  background: #fbf8f1;
+}
+
+.ladder [data-sq] {
+  margin-inline-start: 0.35em;
+}
+
+.pass {
+  font: inherit;
+  font-size: 0.9rem;
+  color: #4d271c;
+  background: #fbf8f1;
+  border: 1px solid #b9b09c;
+  border-radius: 3px;
+  padding-block: 0.1em;
+  padding-inline: 0.7em;
+  margin-inline-start: 0.25em;
+  cursor: pointer;
+}
+
+.pass:hover {
+  border-color: #4d271c;
+}
+
+/* links, each with its square standing at the line's start */
+.links {
+  display: grid;
+  gap: 0.9rem;
+  margin: 1.1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.links li {
+  display: grid;
+  /* one column for every square, wide enough for the one holding a cup: the words line up */
+  grid-template-columns: 3.1em 1fr;
+  align-items: center;
+  column-gap: 0.7em;
+}
+
+.what {
+  color: var(--muted);
+}
+
+.back {
+  margin-block-start: 3rem;
+}
+
+/* the maths, folded: opened by those who want it */
+.under {
+  margin-block: 1rem;
+  border-block-start: 1px solid #d8d0bf;
+  border-block-end: 1px solid #d8d0bf;
+  padding-block: 0.5rem;
+}
+
+.under summary {
+  cursor: pointer;
+  color: #4d271c;
+}
+
+.under dl {
+  margin: 0.75rem 0 0;
+}
+
+.under dt {
+  font-family: 'Gelasio', Georgia, serif;
+  font-weight: 700;
+  margin-block-start: 0.75rem;
+}
+
+.under dd {
+  margin: 0;
+}
+
+.math {
+  font-family: 'Gelasio', Georgia, serif;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+/* the problems someone might bring: a short list, square bullets like the ladder's */
+.problems {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.problems li {
+  position: relative;
+  padding-inline-start: 1.3em;
+}
+
+.problems li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0.15em;
+  inset-block-start: 0.55em;
+  inline-size: 0.45em;
+  block-size: 0.45em;
+  background: #4d271c;
+}
+
+/* the one button on the page that is a link: square corners, the active brown */
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+
+.button {
+  display: inline-block;
+  padding-block: 0.35em;
+  padding-inline: 1em;
+  color: #fbf8f1;
+  background: #4d271c;
+  border: 1px solid #4d271c;
+  text-decoration: none;
+}
+
+.button:hover,
+.button:focus-visible {
+  background: #6a3a2b;
+}
+
+.cta .what {
+  flex: 1 1 14rem;
+  font-size: 0.9rem;
+}
+
+.facts,
+.thanks,
+.books {
+  font-size: 0.9rem;
+}
+
+.facts {
+  color: var(--muted);
+}
+
+.books .what {
+  display: block;
+  font-size: 0.8rem;
+}
+
+/* Pass it on, when neither the share sheet nor the clipboard works: the link, selected, to copy by hand */
+.link {
+  display: block;
+  inline-size: 100%;
+  margin-block-start: 0.5rem;
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.3em 0.5em;
+  border: 1px solid #b9b09c;
+  background: #fbf8f1;
+  color: var(--ink);
+}
+
+/* ——— About from the Exhibit (2026-10-22): the pictures wide, the words in a column ——— */
+main.wide {
+  max-inline-size: 52rem;
+}
+
+main.wide .col {
+  max-inline-size: 36rem;
+}
+
+.exhibit {
+  margin: 2rem 0 0;
+}
+
+.exhibit figcaption {
+  max-inline-size: 36rem;
+}
+
+.exhibit figcaption h2 {
+  margin-block-start: 0.9rem;
+}
+
+.exhibit figcaption p {
+  margin-block: 0.25rem 0.5rem;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 2rem;
+}
+
+@media (max-width: 700px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* a clip, and its square play/pause button in the corner (stage/about/clips.ts) */
+.clip-frame {
+  position: relative;
+}
+
+.clip {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  aspect-ratio: 3 / 2;
+  /* a taller clip sits inside, on the yard's own floor colour */
+  object-fit: contain;
+  background: #fbf8f1;
+  border: 1px solid #d8d0bf;
+  cursor: pointer;
+}
+
+.clip-toggle {
+  position: absolute;
+  inset-block-end: 10px;
+  inset-inline-start: 10px;
+  inline-size: 34px;
+  block-size: 34px;
+  padding: 0;
+  background: #fbf8f1;
+  border: 1px solid #4d271c;
+  cursor: pointer;
+}
+
+/* drawn, not typed: ▶ as a triangle, ❚❚ as two bars, in the active brown */
+.clip-toggle::before,
+.clip-toggle::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+}
+
+.clip-toggle[data-state='paused']::before {
+  inset-inline-start: 12px;
+  border-block: 7px solid transparent;
+  border-inline-start: 11px solid #4d271c;
+}
+
+.clip-toggle[data-state='playing']::before,
+.clip-toggle[data-state='playing']::after {
+  inline-size: 4px;
+  block-size: 13px;
+  background: #4d271c;
+  inset-inline-start: 11px;
+}
+
+.clip-toggle[data-state='playing']::after {
+  inset-inline-start: 18px;
+}
+
+.clip-toggle:focus-visible {
+  outline: 3px solid #e9b949;
+  outline-offset: 2px;
+}
+
+.formula {
+  font-family: 'Gelasio', Georgia, serif;
+  font-style: italic;
+  font-size: 1.25rem;
+  margin: 0.5rem 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.formula sub,
+.formula sup {
+  font-size: 0.65em;
+}
+
+.small {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+main.wide details > summary {
+  cursor: pointer;
+  color: #4d271c;
+  font-size: 0.9rem;
+}
+
+/* the numbers behind a decision */
+#decision table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-block: 0.5rem;
+}
+
+#decision caption {
+  caption-side: bottom;
+  text-align: start;
+  padding-block-start: 0.4rem;
+}
+
+#decision th,
+#decision td {
+  padding-block: 0.3rem;
+  padding-inline: 0 0.75rem;
+  border-block-end: 1px solid #e2dacb;
+  text-align: start;
+  font-weight: 400;
+}
+
+#decision thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+#decision td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* the quiet end: thanks, a coffee, elsewhere, books */
+.foot {
+  margin-block-start: 3.5rem;
+  padding-block-start: 1rem;
+  border-block-start: 1px solid #d8d0bf;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.foot a {
+  color: var(--ink);
+}
+
+.elsewhere {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+}
+
+/* ——— How it was made: a dated log, each version with what stayed (filled square) and what went (empty) ——— */
+.log {
+  list-style: none;
+  margin: 2rem 0;
+  padding: 0;
+  border-inline-start: 2px solid #d8d0bf;
+}
+
+.log > li {
+  position: relative;
+  padding-inline-start: 1.5rem;
+  padding-block-end: 2.5rem;
+}
+
+.log > li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: -7px;
+  inset-block-start: 0.45em;
+  inline-size: 12px;
+  block-size: 12px;
+  background: #fbf8f1;
+  border: 2px solid #4d271c;
+}
+
+.log > li:last-child::before {
+  background: #b7cff9;
+  border-color: #284e99;
+}
+
+.when {
+  font: 700 0.75rem/1 'Vazirmatn', system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.log h2 {
+  font-family: 'Gelasio', Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  margin: 0.3rem 0 0.4rem;
+}
+
+.log img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  margin-block: 0.6rem;
+  border: 1px solid #d8d0bf;
+  background: #fbf8f1;
+}
+
+.log img.paper {
+  background: var(--paper);
+  border: 0;
+}
+
+.fate {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  font-size: 0.9rem;
+}
+
+.fate li {
+  position: relative;
+  padding-inline-start: 1.3em;
+}
+
+.fate li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0.1em;
+  inset-block-start: 0.5em;
+  inline-size: 0.5em;
+  block-size: 0.5em;
+  border: 1px solid #4d271c;
+}
+
+.fate .kept::before {
+  background: #4d271c;
+}
+
+.fate b {
+  font-weight: 600;
+}
+
+/* ——— About, fourth round (2026-10-22): his words larger; the gift first; each clip beside its formula ——— */
+.hello {
+  font-size: 1.2rem;
+  line-height: 1.55;
+}
+
+/* the five of us with our drinks, and the two ways to give, each a square with its sticker */
+.gifts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem 2rem;
+  margin-block: 1.25rem 0.5rem;
+}
+
+.give {
+  display: flex;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.give a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-inline-size: 6.5rem;
+  padding: 0.9rem 0.9rem 0.5rem;
+  background: #fbf8f1;
+  border: 1px solid #d8d0bf;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.give a:hover,
+.give a:focus-visible {
+  border-color: #4d271c;
+}
+
+.give .name {
+  font-weight: 600;
+}
+
+/* a clip on the left, its formula and words on the right */
+#pictures {
+  margin-block: 3rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 1rem 2rem;
+  align-items: center;
+  margin: 0 0 2.5rem;
+}
+
+.row figcaption p {
+  margin-block: 0.75rem 0;
+  font-size: 0.95rem;
+}
+
+.row figcaption b {
+  font-weight: 600;
+}
+
+/* the formula as LaTeX set it, at its own size */
+img.tex {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+@media (max-width: 700px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+#play {
+  margin-block-start: 1rem;
+}
+
+/* the links: two columns of squares, each name over its line */
+#elsewhere .links {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 2rem;
+}
+
+#elsewhere .line {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+#elsewhere .line .what {
+  font-size: 0.9rem;
+}
+
+@media (max-width: 560px) {
+  #elsewhere .links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.disclose {
+  margin-block: 1rem 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fair and Square</title>
+    <link rel="stylesheet" href="./stage/stage.css" />
+  </head>
+  <body>
+    <main class="app">
+      <!-- first in focus order: the tabs and the name, drawn on the line above the yard; then the Story's strip -->
+      <!-- the tabs in their order; their words come from stage/words.en.ts -->
+      <nav id="menu" class="menu" aria-label="Fair and Square">
+        <button type="button" data-go="story" hidden></button>
+        <button type="button" data-go="play" hidden></button>
+        <button type="button" data-go="rules" hidden></button>
+        <a data-go="finds" aria-disabled="true" title="soon" hidden></a>
+        <a data-go="about" href="./about.html" target="_blank" rel="noopener" hidden></a>
+      </nav>
+      <p id="lockup" class="lockup" role="img" hidden></p>
+      <a id="byline" class="byline" href="./about.html" target="_blank" rel="noopener" hidden>Hamed Seyed-Allaei</a>
+      <!-- inside the yard, top right: who built a shared yard (a link's `by`), else nothing -->
+      <a id="credit" class="credit" target="_blank" rel="noopener nofollow" hidden></a>
+      <section id="story" class="strip" aria-label="Learn" hidden></section>
+      <canvas id="stage" aria-label="The yard"></canvas>
+      <output id="hud" class="hud"></output>
+      <p id="question" class="question" hidden></p>
+      <p id="caption" class="caption" hidden></p>
+      <output id="badges" class="badges" hidden></output>
+      <aside id="side" class="side">
+        <section id="panel" class="readerpanel" aria-label="Panel" hidden></section>
+        <section id="console" class="console" aria-label="Dev console">
+          <pre id="log" class="log" aria-live="polite"></pre>
+          <form id="prompt" class="prompt" autocomplete="off">
+            <span class="caret" aria-hidden="true">›</span>
+            <input id="cmd" spellcheck="false" aria-label="Command" placeholder="ccdf · neff · classes · room · trade 2000 · help" />
+          </form>
+        </section>
+      </aside>
+      <section id="rules" class="drawer" aria-label="Build" hidden>
+        <header class="drawer-bar">
+          <strong>Build</strong>
+          <button type="button" class="play" title="play or pause the yard">▶ Play</button>
+          <select aria-label="Library: load a named model">
+            <option value="">Library…</option>
+          </select>
+          <span class="status" aria-live="polite"></span>
+          <button type="button" class="close" aria-label="Close Build">×</button>
+        </header>
+        <div class="blocks" aria-label="The program, as blocks"></div>
+      </section>
+      <button id="toggle" class="toggle" type="button" aria-expanded="true" title="console ( ` )">›_</button>
+    </main>
+    <script type="module" src="./stage/main.ts"></script>
+  </body>
+</html>

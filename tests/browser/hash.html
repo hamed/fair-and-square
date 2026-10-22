@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>FnS determinism</title>
+  </head>
+  <body>
+    <!-- The browser test opens this page: it computes the pinned digests here, in this browser. -->
+    <pre id="out">computing…</pre>
+    <script type="module">
+      import { GOLDEN, PINNED, pinnedNow, presetHashes } from '../model/fixtures.ts';
+      const now = pinnedNow();
+      const presets = presetHashes();
+      const result = { pinned: PINNED, now, golden: GOLDEN, presets };
+      window.__determinism = result;
+      document.getElementById('out').textContent = JSON.stringify(result, null, 1);
+    </script>
+  </body>
+</html>

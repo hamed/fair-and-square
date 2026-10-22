@@ -1,0 +1,29 @@
+{
+  "name": "fair-and-square",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Fair and Square: the stage and its dev console",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:accept": "vitest run --config vitest.accept.config.ts",
+    "test:watch": "vitest",
+    "test:browsers": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/node": "24.13.2",
+    "jsdom": "29.1.1",
+    "typescript": "5.9.3",
+    "vite": "6.4.3",
+    "vitest": "3.2.6"
+  },
+  "dependencies": {
+    "blockly": "13.3.0"
+  }
+}

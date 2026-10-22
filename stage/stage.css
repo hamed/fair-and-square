@@ -1,0 +1,1308 @@
+/* the logo's and the title's faces (OFL, from google/fonts: stage/fonts) */
+@font-face {
+  font-family: 'Gelasio';
+  src: url('./fonts/Gelasio.ttf') format('truetype');
+  font-weight: 400 700;
+  font-style: normal;
+}
+
+/* what people read: Learn's words, the controls, labels, numbers (owner, 2026-10-21) */
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('./fonts/Vazirmatn.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+/* The theme is the square (owner, 2026-10-20): every control, frame and chart of the reader's square-cornered,
+   framed in the essay's dark brown on the floor. Two faces (owner, 2026-10-21): character in Gelasio, the logo's
+   (the wordmark, the tabs, the name: drawn on the canvas); everything people read in Vazirmatn, easy on the eye
+   (Learn's words, the panel, Build, labels and numbers). */
+:root {
+  --paper: #f4efe4;
+  --floor: #fbf8f1;
+  --wall: #5b5547;
+  --faint: #b9b09c;
+  --ink: #28251f;
+  --muted: #7a7262;
+  --brown: #4d271c;
+  --tan: #f1e4c4;
+  --glow: #e9b949;
+  --serif: 'Gelasio', Georgia, serif;
+  --sans: 'Vazirmatn', system-ui, sans-serif;
+  --panel: rgb(40 37 31 / 92%);
+  --panel-ink: #efe8d8;
+  --accent: #e9c96a;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* hidden is hidden, whatever a rule's display (the Story reveals the panel's controls one by one) */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  block-size: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font: 14px/1.4 var(--sans);
+}
+
+.app {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  /* portrait (owner, 2026-10-21): the yard at the top, as tall as it needs at the page's width (--yard-h, from
+     the view; never more than two thirds of the height); under it everything else, scrolling */
+  grid-template-rows: min(var(--yard-h, 100vw), 67vh) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#stage {
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: 0;
+  display: block;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.hud {
+  position: absolute;
+  inset-block-start: 6px;
+  inset-inline-start: 10px;
+  font: 11px/1.3 ui-monospace, monospace;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.question,
+.caption {
+  position: absolute;
+  inset-inline: 0;
+  margin: 0 auto;
+  text-align: center;
+  pointer-events: none;
+}
+
+.question {
+  inset-block-start: 8px;
+  max-inline-size: min(40rem, calc(100% - 32px));
+  font-size: 1.1rem;
+}
+
+.caption {
+  inset-block-start: 34px;
+  max-inline-size: min(36rem, calc(100% - 32px));
+  padding-block: 6px;
+  padding-inline: 12px;
+  border-radius: 8px;
+  background: rgb(251 248 241 / 88%);
+  font-size: 1rem;
+}
+
+.app.story .caption {
+  display: none;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  min-inline-size: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.app.drawing .side,
+.embed .toggle,
+.embed .hud {
+  display: none;
+}
+
+/* ——— the reader's panel ———
+   Squares (owner, 2026-10-21): one of controls (the run, how they stand, the sliders, the numbers; in Learn its row
+   to move about first and the beat's own controls last), one for each chart. --cols across, each --tile square
+   (panel.ts sets both from the side's size). */
+
+.readerpanel {
+  --cols: 1;
+  --tile: 300px;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--tile));
+  grid-auto-rows: var(--tile);
+  /* rows as far apart as ends them at the yard's bottom (panel.ts alignedTo) */
+  gap: var(--row-gap, 10px) 10px;
+  padding: 12px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  flex: 0 1 auto;
+  color: var(--ink);
+  font: 0.85rem/1.4 var(--sans);
+  text-align: start;
+}
+
+.readerpanel .tile {
+  min-inline-size: 0;
+  min-block-size: 0;
+  margin: 0;
+  background: var(--floor);
+  border: 1px solid var(--wall);
+}
+
+.readerpanel .tile.controls {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 8px;
+  overflow-y: auto;
+}
+
+/* Learn's blocks: room for a scrollbar kept always, as one coming and going would change the width, the blocks
+   would refit to it, and the square would shake (owner, 2026-10-21) */
+.readerpanel .tile.controls:has(.program) {
+  scrollbar-gutter: stable;
+}
+
+/* a small square of controls (under 300 px): everything a little tighter, so it all fits in it */
+@container (max-width: 290px) {
+  .readerpanel .tile.controls > * {
+    font-size: 0.78rem;
+  }
+
+  .readerpanel .tile.controls button {
+    min-block-size: 24px;
+    padding-block: 0;
+    padding-inline: 6px;
+  }
+
+  .readerpanel .tile.controls .knobs {
+    row-gap: 0;
+  }
+
+  .readerpanel .tile.controls input[type='range'] {
+    block-size: 16px;
+  }
+}
+
+/* a square's card (a tap on it, in Play): edged in the square's own colour; its swatch, rank and Close on one line,
+   its share, its money round by round, how it feels, its traits, one line */
+.readerpanel .tile.card {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 2px solid var(--own, var(--wall));
+}
+
+.readerpanel .tile.card .head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.readerpanel .tile.card .swatch {
+  inline-size: 16px;
+  block-size: 16px;
+  border: 1.5px solid;
+}
+
+.readerpanel .tile.card .head {
+  flex-wrap: wrap;
+}
+
+.readerpanel .tile.card .head strong {
+  margin-inline-end: auto;
+}
+
+.readerpanel .tile.card p {
+  margin: 0;
+}
+
+.readerpanel .tile.card .chart {
+  inline-size: 100%;
+  block-size: 52%;
+  min-block-size: 96px;
+}
+
+.readerpanel .tile.card .line {
+  margin-block-start: auto;
+  color: var(--muted);
+}
+
+
+/* Learn's blocks are wide: their square takes the whole width, three squares tall */
+.readerpanel .tile.controls:has(.program) {
+  grid-column: 1 / -1;
+  grid-row: span 3;
+}
+
+.readerpanel .tile.plot {
+  padding: 6px;
+  transition: opacity 0.3s;
+}
+
+/* a chart flying in from the yard (Learn's hand-over): its square waits, then shows as it lands */
+.readerpanel .tile.arriving {
+  opacity: 0;
+}
+
+.flight {
+  position: fixed;
+  z-index: 5;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+/* a chart taught in the yard, photographed on its way to the panel: a print in its white border, and the flash */
+.flight.print {
+  padding: 6px;
+  background: #fff;
+  box-shadow: 0 3px 10px rgb(40 37 31 / 25%);
+}
+
+.flash {
+  position: fixed;
+  z-index: 6;
+  background: #fff;
+  pointer-events: none;
+}
+
+.readerpanel .tile.plot .chart {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+/* the charts (stage/view/charts.ts), the sandbox's way: the plot an exact square, its words outside it */
+.chart {
+  font-family: var(--sans);
+  user-select: none;
+}
+
+.chart .grid line {
+  stroke: rgb(169 153 128 / 30%);
+  stroke-width: 0.6;
+}
+
+.chart .frame {
+  fill: none;
+  stroke: #a99980;
+  stroke-width: 0.8;
+}
+
+.chart .tick {
+  fill: var(--muted);
+  font-size: 7.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart .label {
+  fill: var(--muted);
+  font-size: 8px;
+  letter-spacing: 0.03em;
+}
+
+.chart .name {
+  fill: var(--ink);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  cursor: help;
+}
+
+.chart .strip {
+  fill: var(--ink);
+  font-size: 7.5px;
+  font-weight: 600;
+}
+
+.chart .line {
+  fill: none;
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+
+.chart .even {
+  stroke: var(--muted);
+  stroke-width: 0.8;
+  stroke-dasharray: 3 2.5;
+}
+
+.chart .zero {
+  stroke: var(--ink);
+  stroke-width: 0.7;
+}
+
+.chart .bar {
+  fill: #3d6aa8;
+  fill-opacity: 0.6;
+}
+
+/* what hovering shows, fading in */
+.chart .insight {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.chart .insight.on {
+  opacity: 1;
+}
+
+.chart .insight .mark,
+.chart .insight .hair {
+  stroke: var(--ink);
+  stroke-width: 0.8;
+  stroke-dasharray: 3 2.5;
+  opacity: 0.6;
+}
+
+.chart .insight .dot {
+  fill: var(--brown);
+}
+
+.chart .insight .value {
+  fill: var(--ink);
+  font-size: 7.5px;
+  font-weight: 650;
+  paint-order: stroke;
+  stroke: var(--floor);
+  stroke-width: 2.5px;
+}
+
+.chart .hover {
+  fill: transparent;
+}
+
+.chart .hit {
+  fill: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+.chart .hit:focus-visible {
+  outline: 2px solid var(--glow);
+}
+
+/* a chart's square, double-clicked: it fills the window; ✕, Escape or another double-click gives it back */
+.readerpanel .tile.plot {
+  cursor: zoom-in;
+}
+
+.readerpanel .tile.zoomed {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: clamp(0.5rem, 3vmin, 2rem);
+  background: var(--paper);
+  cursor: zoom-out;
+}
+
+.readerpanel .tile.zoomed .chart {
+  inline-size: min(94vmin, 100%);
+  block-size: min(94vmin, 100%);
+}
+
+.readerpanel .tile .unzoom {
+  position: absolute;
+  inset-block-start: 0.6rem;
+  inset-inline-end: 0.8rem;
+  min-inline-size: 32px;
+}
+
+.readerpanel .bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* every button of the panel's: a square frame, its word */
+.readerpanel button {
+  min-block-size: 32px;
+  padding-block: 2px;
+  padding-inline: 8px;
+  border: 1.5px solid var(--brown);
+  border-radius: 0;
+  background: var(--floor);
+  color: var(--brown);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.readerpanel button:not([aria-pressed='true'], :disabled):hover {
+  background: var(--tan);
+}
+
+.readerpanel button[aria-pressed='true'] {
+  background: var(--brown);
+  color: var(--floor);
+}
+
+.readerpanel button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.readerpanel .control.copied {
+  background: #f6dd9a;
+}
+
+.readerpanel :focus-visible,
+.strip :focus-visible {
+  outline: 3px solid var(--glow);
+  outline-offset: 2px;
+}
+
+/* the sliders: name, track and value in the same three columns for every slider */
+.readerpanel .knobs {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) 3.5rem;
+  gap: 2px 8px;
+  align-items: center;
+}
+
+.readerpanel .slider {
+  display: contents;
+}
+
+.readerpanel .slider > span:first-child {
+  color: var(--brown);
+  font-weight: 600;
+}
+
+.readerpanel .slider output {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.readerpanel .slider .track {
+  position: relative;
+  display: block;
+  min-inline-size: 0;
+}
+
+/* where the Story asks a slider to be set */
+.readerpanel .slider .notch {
+  position: absolute;
+  inset-block-start: -3px;
+  inline-size: 3px;
+  block-size: 9px;
+  margin-inline-start: -1.5px;
+  background: var(--brown);
+  pointer-events: none;
+}
+
+/* a slider: a flat track and a square thumb */
+.readerpanel input[type='range'] {
+  appearance: none;
+  inline-size: 100%;
+  block-size: 18px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.readerpanel input[type='range']::-webkit-slider-runnable-track {
+  block-size: 4px;
+  background: #d8cfbd;
+}
+
+.readerpanel input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  inline-size: 14px;
+  block-size: 14px;
+  margin-block-start: -5px;
+  background: var(--brown);
+  border: 0;
+}
+
+.readerpanel input[type='range']::-moz-range-track {
+  block-size: 4px;
+  background: #d8cfbd;
+}
+
+.readerpanel input[type='range']::-moz-range-progress {
+  block-size: 4px;
+  background: var(--brown);
+}
+
+.readerpanel input[type='range']::-moz-range-thumb {
+  inline-size: 14px;
+  block-size: 14px;
+  background: var(--brown);
+  border: 0;
+  border-radius: 0;
+}
+
+/* the numbers: a line of name and value under the sliders */
+.readerpanel .numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.readerpanel .number {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.readerpanel .number span {
+  color: var(--muted);
+}
+
+.readerpanel .number output {
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ——— the Build drawer: the program as blocks, where the panel is (beside the yard, or under it): the yard keeps its
+   size in every tab (owner, 2026-10-21: "the most important thing we have") ——— */
+
+.drawer {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-block-size: 0;
+  min-inline-size: 0;
+  background: var(--floor);
+  border-inline-start: 1px solid var(--faint);
+}
+
+.drawer-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  padding-block: 6px;
+  padding-inline: 12px;
+  border-block-end: 1px solid var(--faint);
+}
+
+.drawer-bar strong {
+  color: var(--brown);
+}
+
+.drawer-bar button,
+.drawer-bar select {
+  border-radius: 0;
+  font: inherit;
+}
+
+/* Blockly's toolbox sets its own face: the functional one here too (its blocks take it from the theme) */
+.drawer .blocklyToolboxCategoryLabel {
+  font-family: var(--sans);
+}
+
+.drawer-bar .status {
+  flex: 1;
+  min-inline-size: 0;
+  color: var(--muted);
+}
+
+.drawer-bar .status.bad {
+  color: #a23b2a;
+}
+
+.drawer .blocks {
+  min-block-size: 0;
+}
+
+/* ——— the dev console ——— */
+
+.console {
+  flex: 1 1 30%;
+  min-block-size: 8rem;
+  display: grid;
+  grid-template-rows: auto auto;
+  background: var(--panel);
+  color: var(--panel-ink);
+  font: 12px/1.45 ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+
+.log {
+  margin: 0;
+  padding-block: 6px 0;
+  padding-inline: 12px;
+  block-size: clamp(5.5rem, 24vh, 16rem);
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.prompt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-block: 4px 8px;
+  padding-inline: 12px;
+}
+
+.caret {
+  color: var(--accent);
+}
+
+.prompt input {
+  flex: 1;
+  min-inline-size: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: inherit;
+  font: inherit;
+}
+
+.prompt input::placeholder {
+  color: rgb(239 232 216 / 40%);
+}
+
+.toggle {
+  position: absolute;
+  inset-block-start: 6px;
+  inset-inline-end: 10px;
+  border: 1px solid var(--faint);
+  border-radius: 6px;
+  background: var(--floor);
+  color: var(--muted);
+  font: 12px ui-monospace, monospace;
+  padding-block: 2px;
+  padding-inline: 8px;
+  cursor: pointer;
+}
+
+/* landscape: the yard keeps a square the height of the window; the side takes the rest, with a margin */
+@media (orientation: landscape) and (min-width: 720px) {
+  .app {
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(0, min(100vh, calc(100vw - 18rem))) minmax(16rem, 1fr);
+  }
+
+  .side {
+    margin: 10px;
+    margin-inline-start: 0;
+    gap: 10px;
+  }
+
+  /* the drawer has the side: no console toggle over its bar (in portrait it stays, over the yard's header) */
+  .app.drawing .toggle {
+    display: none;
+  }
+
+  /* the squares: their top at the yard's top, as many as the side holds */
+  .readerpanel {
+    align-self: flex-start;
+    padding: 0;
+    margin-block-start: max(0px, calc(var(--yard-top, 10px) - 10px));
+    max-block-size: calc(100vh - max(10px, var(--yard-top, 10px)) - 10px);
+    flex: 0 0 auto;
+  }
+
+  .console {
+    inline-size: auto;
+    min-inline-size: 0;
+    grid-template-rows: minmax(0, 1fr) auto;
+    border-radius: 8px;
+  }
+
+  .log {
+    block-size: auto;
+    min-block-size: 0;
+  }
+
+  /* over the yard, not the console */
+  .caption,
+  .question {
+    inset-inline-end: calc(100vw - min(100vh, calc(100vw - 18rem)));
+    max-inline-size: min(36rem, calc(min(100vh, calc(100vw - 18rem)) - 32px));
+  }
+}
+
+/* ——— the menu: the title, the name and the tabs are drawn on the canvas; these lie over them, invisible but for
+   focus and hover (the menu's box stays out of the page's grid: main.ts places them one by one). The title's says
+   its name in words, "Fair and Square" ——— */
+
+.menu {
+  position: absolute;
+}
+
+.menu > *,
+.byline,
+.lockup {
+  position: fixed;
+  color: transparent;
+  font-size: 1px;
+  overflow: hidden;
+  border-radius: 3px;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.lockup {
+  margin: 0;
+}
+
+/* who built a shared yard: small, inside its top-right corner */
+.credit {
+  position: fixed;
+  z-index: 2;
+  max-inline-size: 40%;
+  color: var(--muted);
+  font: 0.8rem/1.3 var(--sans);
+  text-align: end;
+  text-decoration: none;
+}
+
+.credit[href]:hover {
+  color: var(--brown);
+  text-decoration: underline;
+}
+
+.menu > * {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+.menu > [aria-disabled='true'] {
+  cursor: default;
+}
+
+.menu > :not([aria-disabled='true']):hover {
+  background: rgb(77 39 28 / 8%);
+}
+
+.byline:hover {
+  box-shadow: inset 0 -1px 0 var(--muted);
+}
+
+.menu > :focus-visible,
+.byline:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: 2px;
+}
+
+/* ——— the Story ———
+   Over the yard's top, inside it (main.ts lays the words over the floor; the yard keeps its size and the room
+   stands clear of them): large, calm words, centred, and the guess in pictures. Taps beside them reach the yard.
+   Everything else is in the panel, where Play has it. */
+
+.strip {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  color: var(--ink);
+  font-family: var(--sans);
+}
+
+.strip .say {
+  position: fixed;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-block: 10px 0;
+  padding-inline: 4%;
+  pointer-events: none;
+}
+
+/* the words in the yard's top-left quarter (the rest a widget's): centred in it, as large as sits well in it, with a
+   margin all round (owner, 2026-10-21: the whole quarter is the words') */
+.strip .say.quarter {
+  container-type: size;
+  justify-content: center;
+  padding: 0;
+}
+
+.strip .say.quarter .words {
+  max-inline-size: 80cqi;
+  padding: 0;
+  background: none;
+  font-size: clamp(0.95rem, 7.2cqmin, 2.3rem);
+  line-height: 1.3;
+  text-wrap: pretty;
+}
+
+.strip .words {
+  margin: 0;
+  padding-block: 0.15em;
+  padding-inline: 0.5em;
+  font-size: clamp(1.2rem, 0.8rem + 2.8vmin, 2.7rem);
+  line-height: 1.25;
+  text-align: center;
+  text-wrap: balance;
+  max-inline-size: 22em;
+}
+
+.strip .words strong {
+  color: var(--brown);
+}
+
+/* each line backed by the floor, a little beyond its ends (owner, 2026-10-22: a label beside a short line shows) */
+.strip .words .ink {
+  padding-inline: 0.3em;
+  background: rgb(251 248 241 / 82%);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.strip .say.quarter .words .ink {
+  background: none;
+}
+
+/* a beat's words in two parts: the second comes in after a pause, or once the reader has acted */
+.strip .words .then {
+  animation: then 0.5s ease-out both;
+}
+
+.strip .words .then.later {
+  visibility: hidden;
+  animation: none;
+}
+
+/* the second part in the first's place: both in one cell, as big as the bigger, only one shown */
+.strip .words .swap {
+  display: inline-grid;
+}
+
+.strip .words .swap > * {
+  grid-area: 1 / 1;
+}
+
+.strip .words .swap > .gone {
+  visibility: hidden;
+}
+
+@keyframes then {
+  from {
+    opacity: 0;
+  }
+}
+
+/* a guess in pictures: the two partners as they might end up */
+.strip .choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.strip .choice {
+  inline-size: clamp(64px, 17vmin, 120px);
+  padding: 4px;
+  border: 1.5px solid var(--brown);
+  border-radius: 0;
+  background: var(--floor);
+  cursor: pointer;
+}
+
+.strip .choice svg {
+  display: block;
+  inline-size: 100%;
+}
+
+.strip .choice:hover {
+  background: #f6eedb;
+}
+
+.strip .choice[aria-pressed='true'] {
+  background: var(--tan);
+  outline: 3px solid var(--brown);
+}
+
+.sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* the story's way about, where Play's run controls are: Back, the acts (numbered, each with its progress; named
+   for screen readers and on hover), Show me, Next */
+.readerpanel .storyrow {
+  border-block-end: 1px solid var(--faint);
+  padding-block-end: 6px;
+}
+
+.storynav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-block-start: 2px;
+}
+
+.storynav .acts {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.storynav .acts li {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+}
+
+.storynav .acts li:has(.current) {
+  flex: 1 1 auto;
+}
+
+.readerpanel .storynav .act {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 2px;
+  inline-size: 100%;
+  min-inline-size: 32px;
+  padding-block: 4px;
+  padding-inline: 6px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.readerpanel .storynav .act:hover {
+  background: rgb(77 39 28 / 6%);
+}
+
+.storynav .act.current {
+  color: var(--brown);
+}
+
+.storynav .act .number {
+  display: grid;
+  place-items: center;
+  min-inline-size: 1.6em;
+  padding-inline: 0.25em;
+  block-size: 1.6em;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid currentColor;
+  font-weight: 700;
+}
+
+.storynav .act .bar {
+  inline-size: 100%;
+  block-size: 3px;
+  background: rgb(185 176 156 / 45%);
+  overflow: hidden;
+}
+
+.storynav .act .fill {
+  display: block;
+  block-size: 100%;
+  inline-size: 0;
+  background: var(--brown);
+  transition: inline-size 0.3s;
+}
+
+.readerpanel .storynav .next {
+  padding-inline: 14px;
+  background: var(--brown);
+  color: var(--floor);
+  font-size: 0.95rem;
+}
+
+.readerpanel .storynav .next[aria-disabled='true'] {
+  background: var(--floor);
+  color: var(--brown);
+  opacity: 0.55;
+}
+
+.readerpanel .storynav .showme {
+  padding-inline: 14px;
+  font-size: 0.95rem;
+}
+
+/* a narrow square of controls: the acts a row of their own, Back on one side, Do it for me and Next on the other */
+@container (max-width: 440px) {
+  .storynav {
+    flex-wrap: wrap;
+  }
+
+  .storynav .acts {
+    order: -1;
+    flex-basis: 100%;
+  }
+
+  .storynav .back {
+    margin-inline-end: auto;
+  }
+}
+
+/* the beat's own controls: the line's twin, the program as blocks */
+.readerpanel .storycontrols {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.readerpanel .storycontrols .line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.readerpanel .storycontrols .line input {
+  flex: 1;
+}
+
+/* the wealth slider: its track the two players' colours, each as long as its share */
+.readerpanel .storycontrols .wealth input::-webkit-slider-runnable-track {
+  block-size: 10px;
+  background: linear-gradient(to right, var(--left) 0 var(--at), var(--right) var(--at) 100%);
+}
+
+.readerpanel .storycontrols .wealth input::-moz-range-track {
+  block-size: 10px;
+  background: linear-gradient(to right, var(--left) 0 var(--at), var(--right) var(--at) 100%);
+}
+
+.readerpanel .storycontrols .wealth input::-moz-range-progress {
+  background: transparent;
+}
+
+.readerpanel .storycontrols .wealth input::-webkit-slider-thumb {
+  margin-block-start: -4px;
+  inline-size: 8px;
+  block-size: 18px;
+  background: var(--ink);
+}
+
+.readerpanel .storycontrols .wealth output {
+  min-inline-size: 6.5em;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.readerpanel .program {
+  inline-size: 100%;
+  block-size: 300px;
+  flex: none;
+  border: 1px solid var(--faint);
+  overflow: hidden;
+}
+
+/* something to look at, or to do: a gold light, breathing */
+.storynav .showme,
+.strip .choices.hint .choice,
+.readerpanel .storycontrols.hint .line,
+.readerpanel .slider.glow > span,
+.readerpanel .slider.glow > .track,
+.readerpanel .control.glow {
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+.storynav .next.ready {
+  animation: nudge 2.4s ease-in-out 3s infinite;
+}
+
+:root[dir='rtl'] .storynav .next.ready {
+  animation-name: none;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px rgb(233 185 73 / 55%), 0 0 10px 2px rgb(233 185 73 / 35%);
+  }
+
+  50% {
+    box-shadow: 0 0 0 3px rgb(233 185 73 / 90%), 0 0 18px 6px rgb(233 185 73 / 55%);
+  }
+}
+
+@keyframes nudge {
+  0%,
+  80%,
+  100% {
+    transform: none;
+  }
+
+  88% {
+    transform: translateX(4px);
+  }
+
+  94% {
+    transform: translateX(-2px);
+  }
+}
+
+/* the console's badges (`badge`), in the floor's top-left corner */
+.badges {
+  position: fixed;
+  z-index: 2;
+  padding-block: 3px;
+  padding-inline: 10px;
+  background: rgb(251 248 241 / 90%);
+  border: 1px solid var(--faint);
+  color: var(--ink);
+  font: 600 0.95rem/1.3 var(--sans);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* the three yards (Act 4): quarters of the big one, each a button once there is a choice to make */
+.yards .quarter {
+  position: fixed;
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--floor);
+  overflow: hidden;
+  cursor: default;
+  animation: appear 0.5s ease-out both;
+  transition:
+    left 0.7s ease-in-out,
+    top 0.7s ease-in-out,
+    width 0.7s ease-in-out,
+    height 0.7s ease-in-out,
+    opacity 0.5s;
+}
+
+.yards .quarter canvas {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+/* before the choice, a yard clicked shows its numbers and charts in the panel (owner, 2026-10-22) */
+.yards:not([data-phase='grow']) .quarter {
+  cursor: pointer;
+}
+
+.yards .quarter.looked {
+  outline: 3px solid var(--muted);
+  outline-offset: -3px;
+}
+
+.yards[data-phase='pick'] .quarter:hover,
+.yards[data-phase='pick'] .quarter:focus-visible {
+  outline: 4px solid var(--glow);
+  outline-offset: 2px;
+}
+
+.yards .quarter.chosen {
+  outline: 4px solid var(--brown);
+  outline-offset: 2px;
+}
+
+.yards.grown .quarter:not(.growing) {
+  opacity: 0;
+}
+
+/* grown to the whole yard, it gives way to the big one, which is the same yard */
+.yards.grown .quarter.growing {
+  opacity: 0;
+  transition:
+    left 0.7s ease-in-out,
+    top 0.7s ease-in-out,
+    width 0.7s ease-in-out,
+    height 0.7s ease-in-out,
+    opacity 0.5s 0.9s;
+  pointer-events: none;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/* the reader asked for less motion: lights hold still, nothing slides */
+@media (prefers-reduced-motion: reduce) {
+  .storynav .showme,
+  .strip .choices.hint .choice,
+  .readerpanel .storycontrols.hint .line,
+  .readerpanel .slider.glow > span,
+  .readerpanel .slider.glow > .track,
+  .readerpanel .control.glow {
+    animation: none;
+    box-shadow: 0 0 0 3px rgb(233 185 73 / 90%);
+  }
+
+  .storynav .next.ready,
+  .strip .words .then,
+  .storynav .act .fill,
+  .yards .quarter,
+  .yards.grown .quarter.growing {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* icons (owner, 2026-10-22: where an icon is clear): the game's square line, in the text's colour */
+.icon {
+  display: block;
+  flex: none;
+  inline-size: 1.15em;
+  block-size: 1.15em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+.icon .f {
+  fill: currentColor;
+  stroke: none;
+}
+
+.icon .soft {
+  fill: currentColor;
+  fill-opacity: 0.28;
+  stroke-width: 1.1;
+}
+
+.icon .dash {
+  stroke-width: 1.1;
+  stroke-dasharray: 1.6 1.4;
+}
+
+/* back and next point the way the page reads */
+:root[dir='rtl'] :is(.icon-back, .icon-next) {
+  transform: scaleX(-1);
+}
+
+/* a control showing its icon alone: square, the icon centred, its word on hover and for screen readers */
+button.iconic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 28px;
+  padding-inline: 5px;
+}
+
+/* a small square of controls: the icons a little narrower, so a row of six fits */
+@container (max-width: 290px) {
+  .readerpanel .tile.controls button.iconic {
+    min-inline-size: 26px;
+    padding-inline: 4px;
+  }
+}
+
+button.iconic[aria-pressed='true'] {
+  background: var(--brown);
+  color: var(--floor);
+}
