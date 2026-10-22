@@ -13,7 +13,9 @@ export function* mathGrid(): Generator<number> {
     const t = i / 4000;
     yield exp(((t - 0.5) * 1400) / 10);
     yield exp(t * 2 - 1);
-    yield log(1e-300 * 10 ** (t * 600));
+    // a whole power of two (exact, by squaring) times 1 + t: from about 1e-300 to 1e300 with nothing left to an
+    // engine's own pow (`10 ** x` differs between Node 22 and 24, so the inputs did; 2026-10-23)
+    yield log(pow(2, Math.floor(t * 1993) - 996) * (1 + t));
     yield log(0.5 + t);
     yield sqrt(t * 1e6 + 1e-310 * i);
     yield cos2pi(t * 3 - 1);
@@ -36,7 +38,8 @@ export function streamSample(): number[] {
 
 /** Digests at engine version 1. A change here changes outputs: bump the engine version (spec, Determinism). */
 export const PINNED = {
-  math: '864f7e52141e2852',
+  // re-pinned 2026-10-23 when mathGrid's inputs became exact (the engine's functions did not change)
+  math: '1969fec9641de53a',
   streams: 'a1a2644ab1382067',
 } as const;
 
