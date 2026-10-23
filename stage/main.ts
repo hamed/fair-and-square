@@ -393,6 +393,8 @@ function openingState(): OpeningState {
 window.addEventListener('keydown', (e) => {
   // a key something on the page has already used (Blockly's own navigation) is not the page's too
   if (e.defaultPrevented) return;
+  // Native disclosure activation and reading/scrolling keep their keys, without starting or advancing the game.
+  if (e.target instanceof Element && e.target.closest('#game-info')) return;
   const action = keyAction(e.key, keyTarget(e.target), openingState(), mode === 'story', document.documentElement.dir === 'rtl');
   // a focused button or link presses itself (its own click does the rest)
   if (action === 'native' || action === 'none') return;

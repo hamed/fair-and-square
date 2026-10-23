@@ -64,6 +64,64 @@ body {
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* Static game context: one quiet control outside the fullscreen app's grid; its text opens upward. */
+.game-info {
+  position: fixed;
+  inset-inline-end: max(10px, env(safe-area-inset-right));
+  inset-block-end: max(6px, env(safe-area-inset-bottom));
+  z-index: 7;
+  max-inline-size: calc(100vw - 20px);
+  color: var(--muted);
+  font: 0.85rem/1.4 var(--sans);
+}
+
+.game-info > summary {
+  padding: 6px 8px;
+  background: var(--paper);
+  cursor: pointer;
+  list-style: none;
+}
+
+.game-info > summary::-webkit-details-marker {
+  display: none;
+}
+
+.game-info > summary:hover,
+.game-info[open] > summary {
+  color: var(--brown);
+}
+
+.game-info > summary:focus-visible,
+.game-info-copy:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: 2px;
+}
+
+.game-info-copy {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-end: calc(100% + 6px);
+  inline-size: min(32rem, calc(100vw - 20px));
+  max-block-size: min(28rem, 60vh);
+  max-block-size: min(28rem, 60dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 16px;
+  border: 1px solid var(--faint);
+  background: var(--floor);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.game-info-copy p {
+  margin: 0;
+}
+
+.game-info-copy p + p {
+  margin-block-start: 0.75em;
+}
+
 #stage {
   inline-size: 100%;
   block-size: 100%;

@@ -3,7 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fair and Square</title>
+    <title>Fair and Square — An Interactive Game About Wealth Inequality</title>
+    <meta name="description" content="A free interactive game about wealth inequality. Explore how fair trades, chance and taxation shape wealth in the Yard-Sale Model." />
+    <link rel="canonical" href="https://hamed.github.io/fair-and-square/" />
     <link rel="stylesheet" href="./stage/stage.css" />
     <!-- visits, counted without cookies: Umami (only on the live site), and Cloudflare Web Analytics -->
     <script src="./analytics-init.js"></script>
@@ -56,6 +58,14 @@
       </section>
       <button id="toggle" class="toggle" type="button" aria-expanded="true" title="console ( ` )">›_</button>
     </main>
+    <details id="game-info" class="game-info">
+      <summary><span aria-hidden="true">ⓘ</span> About this game</summary>
+      <section class="game-info-copy" aria-label="About this game" tabindex="0">
+        <p>Fair and Square is a free interactive browser game about wealth inequality, chance and redistribution, created by physicist Hamed Seyed-Allaei.</p>
+        <p>Based on the Yard-Sale Model, it explores how repeated trades with equal chances of winning can concentrate wealth, and how changing the stake and tax rate affects the outcome.</p>
+        <p>Animated squares represent wealth. Players can explore the Gini coefficient, Lorenz curve and effective number of participants to see how simple rules give rise to complex, unexpected behaviour.</p>
+      </section>
+    </details>
     <script type="module" src="./stage/main.ts"></script>
   </body>
 </html>
