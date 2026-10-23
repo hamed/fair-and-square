@@ -16,5 +16,5 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true
   },
-  "include": ["stage", "model", "blocks", "tests", "vite.config.ts", "vitest.accept.config.ts", "playwright.config.ts"]
+  "include": ["stage", "model", "blocks", "tests", "vite.config.ts", "vitest.accept.config.ts", "playwright.config.ts", "playwright.production.config.ts"]
 }

@@ -34,6 +34,8 @@ Every push to `main` deploys to GitHub Pages (`.github/workflows/deploy.yml`). D
 [the stage and its console](docs/development.md) · [Learn](docs/story-spec.md) ·
 [the model and its blocks](docs/model-blocks-spec.md) · [the brand](docs/brand.md).
 
+Promotion and measurement: [private campaign links](docs/campaigns.md) · [analytics events](docs/analytics.md).
+
 ## Thanks
 
 The model is not mine: Anirban Chakraborti wrote it down and Brian Hayes named it, both in 2002; Bruce Boghosian and

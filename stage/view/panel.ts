@@ -21,6 +21,8 @@ import { FILLS, STROKES } from '../essay/agentStyle.ts';
 import { Chart, drawCcdf, drawHistogram, drawLorenz, drawSeries, drawTime, drawTurnover, zoomable } from './charts.ts';
 import { colourOf } from './render.ts';
 import { wear, type IconName } from './icons.ts';
+import { sharedUrl, track, type AnalyticsData } from '../analytics.ts';
+import { simulationSummary } from '../analytics/simulation.ts';
 
 /** Refresh the numbers and plots this often, ms. */
 const EVERY = 200;
@@ -92,6 +94,7 @@ interface SliderView {
 }
 
 export class Panel {
+  analyticsContext: () => 'learn' | 'play' | 'build' = () => 'play';
   private readonly root: HTMLElement;
   private readonly main: () => Session;
   /** A yard looked at instead of the page's (Learn's three yards, one clicked), and its name. */
@@ -356,7 +359,7 @@ export class Panel {
     }
     const share = this.control(WORDS.panel.share, WORDS.panel.shareTip, () => this.send(share, -1), 'share', this.people, 'share');
     wear(share, 'share', WORDS.panel.share, WORDS.panel.shareTip);
-    const embed = this.control(WORDS.panel.embed, WORDS.panel.embedTip, () => this.copy(embed, () => `<iframe src="${this.link()}&embed=1" title="${WORDS.panel.frameTitle}" width="640" height="640" style="border:0"></iframe>`), 'share', this.people, 'embed');
+    const embed = this.control(WORDS.panel.embed, WORDS.panel.embedTip, () => this.embed(embed), 'share', this.people, 'embed');
     wear(embed, 'embed', WORDS.panel.embed, WORDS.panel.embedTip);
     // how much is shown moving (owner, 2026-10-22): coins, pieces, or nothing, one button that steps through them
     // (its icon the one chosen), kept through a new yard
@@ -623,9 +626,14 @@ export class Panel {
   }
 
   /** `text` to the clipboard; done, the button lights a moment and says so. */
-  private copy(b: HTMLButtonElement, text: () => string): void {
-    void navigator.clipboard?.writeText(text()).then(
+  private copy(b: HTMLButtonElement, text: () => string, result?: (outcome: 'copied' | 'failed') => void): void {
+    if (!navigator.clipboard) { result?.('failed'); return; }
+    let writing: Promise<void>;
+    try { writing = navigator.clipboard.writeText(text()); }
+    catch { result?.('failed'); return; }
+    void writing.then(
       () => {
+        result?.('copied');
         const was = b.getAttribute('aria-label') ?? '';
         b.setAttribute('aria-label', WORDS.panel.copied);
         b.classList.add('copied');
@@ -635,15 +643,15 @@ export class Panel {
           b.classList.remove('copied');
         }, 1500);
       },
-      () => undefined,
+      () => result?.('failed'),
     );
   }
 
   /** This yard's link, as it is now (the address bar follows). */
-  private link(): string {
+  private link(source: 'yard' | 'square' | 'embed'): string {
     const hash = this.session().share();
     history.replaceState(null, '', hash);
-    return `${location.origin}${location.pathname}${hash}`;
+    return sharedUrl(`${location.origin}${location.pathname}`, hash, source);
   }
 
   /**
@@ -652,9 +660,28 @@ export class Panel {
    */
   private send(b: HTMLButtonElement, i: number): void {
     const text = sharedLine(this.session(), i);
-    const url = this.link();
-    if (navigator.share && matchMedia('(pointer: coarse)').matches) void navigator.share({ title: WORDS.panel.frameTitle, text, url }).catch(() => undefined);
-    else this.copy(b, () => `${text} ${url}`);
+    const source = i < 0 ? 'yard' : 'square';
+    const data: AnalyticsData = { source, context: this.analyticsContext(), ...simulationSummary(this.session()) };
+    const native = !!navigator.share && matchMedia('(pointer: coarse)').matches;
+    const outcome = (status: string) => track('share', { ...data, method: native ? 'native' : 'clipboard', outcome: status });
+    outcome('attempt');
+    const url = this.link(source);
+    if (native) {
+      try {
+        void navigator.share({ title: WORDS.panel.frameTitle, text, url }).then(
+          () => outcome('handed_off'),
+          (error: unknown) => outcome(error instanceof Error && error.name === 'AbortError' ? 'cancelled' : 'failed'),
+        );
+      } catch { outcome('failed'); }
+    } else this.copy(b, () => `${text} ${url}`, outcome);
+  }
+
+  private embed(b: HTMLButtonElement): void {
+    const data: AnalyticsData = { source: 'embed', context: this.analyticsContext(), method: 'clipboard', ...simulationSummary(this.session()) };
+    track('share', { ...data, outcome: 'attempt' });
+    const url = this.link('embed');
+    this.copy(b, () => `<iframe src="${url}&embed=1" title="${WORDS.panel.frameTitle}" width="640" height="640" style="border:0"></iframe>`,
+      (outcome) => track('share', { ...data, outcome }));
   }
 
   /** Which arrangement the yard stands in now (its id), if one of ARRANGE. */

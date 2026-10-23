@@ -3,6 +3,8 @@
  * (MB5 and its recheck R1, MB7; MB4's modes are gone), the self-review's S3, and the drawer itself (the yard plays the blocks).
  */
 import { expect, test, type Page } from '@playwright/test';
+import { canonical } from '../../model/ast.ts';
+import { PRESETS, preset } from '../../model/presets.ts';
 
 test.skip(({ browserName }) => browserName !== 'chromium', 'editor behaviour: one browser is enough');
 
@@ -23,12 +25,129 @@ const canonicalIn = `(p) => JSON.stringify(p, (_k, v) => v && typeof v === 'obje
 const blocksProgram = (page: Page) => page.evaluate((c) => eval(c)((window as any).fns.editor().read().program), canonicalIn);
 const yardProgram = (page: Page) => page.evaluate((c) => eval(c)((window as any).fns.session().game.program), canonicalIn);
 
+test('the library shows only released and coming-soon models, with a follow link', async ({ page }) => {
+  await open(page);
+  const options = await page.locator('#rules select option').evaluateAll((os) =>
+    os.map((o) => ({ value: (o as HTMLOptionElement).value, text: o.textContent, disabled: (o as HTMLOptionElement).disabled })),
+  );
+  expect(options).toEqual([
+    { value: '', text: 'Library…', disabled: false },
+    { value: 'yard-sale', text: 'Yard sale', disabled: false },
+    { value: 'wealth-tax', text: 'Wealth tax', disabled: false },
+    { value: 'advantage', text: 'Advantage: the richer are stronger — coming soon', disabled: true },
+    { value: 'merit', text: 'Merit — coming soon', disabled: true },
+  ]);
+  const note = page.locator('#rules .library-note');
+  await expect(note).toHaveText('More models coming soon. Follow me for new releases →');
+  await expect(note).toBeVisible();
+  const follow = note.getByRole('link', { name: 'Follow me for new releases →' });
+  await expect(follow).toHaveAttribute('href', './about.html#elsewhere');
+  await expect(follow).toHaveAttribute('target', '_blank');
+  await expect(follow).toHaveAttribute('rel', 'noopener');
+  const popupPromise = page.waitForEvent('popup');
+  await follow.click();
+  const popup = await popupPromise;
+  await expect(popup).toHaveURL(/\/about\.html#elsewhere$/);
+  await expect(popup.locator('#elsewhere')).toBeInViewport();
+  await popup.close();
+});
+
+test('coming-soon selections leave the blocks and yard unchanged', async ({ page }) => {
+  await open(page);
+  const before = await blocksProgram(page);
+  const beforeYard = await yardProgram(page);
+  for (const id of ['advantage', 'merit']) {
+    await page.locator('#rules select').evaluate((el: HTMLSelectElement, id) => {
+      el.value = id;
+      el.dispatchEvent(new Event('change'));
+    }, id);
+    await settle(page);
+    expect(await blocksProgram(page)).toBe(before);
+    expect(await yardProgram(page)).toBe(beforeYard);
+    await expect(page.locator('#rules select')).toHaveValue('');
+  }
+});
+
+test('both released models load from the library into the blocks and yard', async ({ page }) => {
+  await open(page);
+  for (const id of ['wealth-tax', 'yard-sale']) {
+    await page.selectOption('#rules select', id);
+    await settle(page);
+    expect(await blocksProgram(page)).toBe(canonical(preset(id).program));
+    expect(await yardProgram(page)).toBe(canonical(preset(id).program));
+    await expect(page.locator('#rules select')).toHaveValue('');
+  }
+});
+
+test('compact power and group fraction keep their connections through mode changes and undo', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await open(page);
+  await page.evaluate(() => {
+    const ws = (window as any).fns.editor().workspace;
+    const power = ws.newBlock('op.fn2');
+    power.initSvg();
+    for (const [name, value] of [['a', 2], ['b', 3]]) {
+      const literal = ws.newBlock('num');
+      literal.setFieldValue(value, 'v');
+      literal.initSvg();
+      literal.render();
+      power.getInput(name).connection.connect(literal.outputConnection);
+    }
+    power.render();
+    const stat = ws.newBlock('stat.of');
+    stat.setFieldValue('talent', 'prop');
+    stat.initSvg();
+    const group = ws.newBlock('group.all');
+    group.initSvg();
+    group.render();
+    stat.getInput('over').connection.connect(group.outputConnection);
+    stat.render();
+    (window as any).sentenceBlocks = { power, stat, a: power.getInputTargetBlock('a').id, b: power.getInputTargetBlock('b').id, group: group.id };
+  });
+  await settle(page);
+  const state = () => page.evaluate(() => {
+    const { power, stat, a, b, group } = (window as any).sentenceBlocks;
+    return {
+      fn: power.getFieldValue('fn'),
+      order: power.inputList.map((i: { name: string }) => i.name),
+      operandsKept: power.getInputTargetBlock('a').id === a && power.getInputTargetBlock('b').id === b,
+      stat: stat.getFieldValue('stat'),
+      prop: stat.getFieldValue('prop'),
+      propVisible: stat.getField('prop').isVisible(),
+      inVisible: stat.getField('IN').isVisible(),
+      groupKept: stat.getInputTargetBlock('over').id === group,
+    };
+  });
+  await page.evaluate(() => (window as any).fns.editor().workspace.clearUndo());
+  await page.evaluate(() => (window as any).sentenceBlocks.power.setFieldValue('power', 'fn'));
+  await settle(page);
+  expect(await state()).toMatchObject({ fn: 'power', order: ['a', 'function', 'b'], operandsKept: true });
+  await page.evaluate(() => (window as any).fns.editor().workspace.undo(false));
+  await settle(page);
+  expect(await state()).toMatchObject({ fn: 'min', order: ['function', 'a', 'b'], operandsKept: true });
+  await page.evaluate(() => (window as any).fns.editor().workspace.undo(true));
+  await settle(page);
+  expect(await state()).toMatchObject({ fn: 'power', order: ['a', 'function', 'b'], operandsKept: true });
+  await page.evaluate(() => (window as any).fns.editor().workspace.clearUndo());
+  await page.evaluate(() => (window as any).sentenceBlocks.stat.setFieldValue('fraction', 'stat'));
+  await settle(page);
+  expect(await state()).toMatchObject({ stat: 'fraction', prop: 'talent', propVisible: false, inVisible: true, groupKept: true });
+  await page.evaluate(() => (window as any).fns.editor().workspace.undo(false));
+  await settle(page);
+  expect(await state()).toMatchObject({ stat: 'gini', prop: 'talent', propVisible: true, inVisible: false, groupKept: true });
+  await page.evaluate(() => (window as any).fns.editor().workspace.undo(true));
+  await settle(page);
+  expect(await state()).toMatchObject({ stat: 'fraction', prop: 'talent', propVisible: false, inVisible: true, groupKept: true });
+  expect(errors).toEqual([]);
+});
+
 test('the yard plays the blocks: a library model goes to the yard, an invalid edit does not', async ({ page }) => {
   await open(page);
   expect(await blocksProgram(page)).toBe(await yardProgram(page));
-  await page.selectOption('#rules select', 'floor');
+  await page.selectOption('#rules select', 'wealth-tax');
   await settle(page);
-  expect(await yardProgram(page)).toContain('"op":"group.poorest"');
+  expect(await yardProgram(page)).toContain('"op":"take.wealth"');
   expect(await page.evaluate(() => (window as any).fns.session().game.n)).toBe(100);
   // a reporter that reads "winner" in the tax: greyed, and the yard keeps the last good program
   const before = await yardProgram(page);
@@ -48,7 +167,7 @@ test('the yard plays the blocks: a library model goes to the yard, an invalid ed
 
 test('MB5 and R1: a load the blocks reject changes neither the workspace nor its undo history', async ({ page }) => {
   await open(page);
-  await page.selectOption('#rules select', 'saving');
+  await page.evaluate((program) => (window as any).fns.editor().load(program), preset('saving').program);
   await settle(page);
   const state = () =>
     page.evaluate(() => {
@@ -125,15 +244,14 @@ test('S3: a warning raised during setup shows on its block before any step', asy
   expect(warned).toEqual(['num']);
 });
 
-test('every library model loads without a page error (two-dropdown shadows, Blockly 13.3)', async ({ page }) => {
+test('every preset still loads directly without a page error (two-dropdown shadows, Blockly 13.3)', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await open(page);
-  const ids = await page.locator('#rules select option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value).filter(Boolean));
-  expect(ids).toHaveLength(15);
-  for (const id of ids) {
-    await page.selectOption('#rules select', id);
+  for (const p of PRESETS) {
+    await page.evaluate((program) => (window as any).fns.editor().load(program), p.program);
     await page.waitForTimeout(200);
+    expect(await blocksProgram(page), p.id).toBe(canonical(p.program));
   }
   await settle(page);
   expect(errors).toEqual([]);
@@ -201,21 +319,23 @@ test('N1: after the run changed a slider underneath, it can be set to the value 
 });
 
 /** N10: a library pick made while the blocks are still loading is kept. */
-test('N10: a model chosen while the blocks load is the one loaded', async ({ page }) => {
-  await page.route('**/blocks/editor.ts**', async (route) => {
-    await new Promise((r) => setTimeout(r, 1500));
-    await route.continue();
+for (const id of ['yard-sale', 'wealth-tax']) {
+  test(`N10: ${id} chosen while the blocks load is the one loaded`, async ({ page }) => {
+    await page.route('**/blocks/editor.ts**', async (route) => {
+      await new Promise((r) => setTimeout(r, 1500));
+      await route.continue();
+    });
+    await page.goto('/?opening=0');
+    await page.waitForFunction(() => (window as unknown as { fns?: unknown }).fns);
+    await page.evaluate(() => (document.querySelector('#menu [data-go="rules"]') as HTMLElement).click());
+    await expect(page.locator('#rules .status')).toContainText('loading');
+    await page.selectOption('#rules select', id);
+    await page.waitForFunction(() => (window as any).fns.editor());
+    await settle(page);
+    expect(await yardProgram(page)).toBe(canonical(preset(id).program));
+    expect(await blocksProgram(page)).toBe(await yardProgram(page));
   });
-  await page.goto('/?opening=0');
-  await page.waitForFunction(() => (window as unknown as { fns?: unknown }).fns);
-  await page.evaluate(() => (document.querySelector('#menu [data-go="rules"]') as HTMLElement).click());
-  await expect(page.locator('#rules .status')).toContainText('loading');
-  await page.selectOption('#rules select', 'floor');
-  await page.waitForFunction(() => (window as any).fns.editor());
-  await settle(page);
-  expect(await yardProgram(page)).toContain('"op":"group.poorest"');
-  expect(await blocksProgram(page)).toBe(await yardProgram(page));
-});
+}
 
 /** N11: opening Rules on a shared custom model, without an edit, keeps the run where it is. */
 test('N11: opening Rules does not restart a shared model', async ({ page }) => {

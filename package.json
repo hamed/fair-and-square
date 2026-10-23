@@ -9,11 +9,13 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "campaign": "node scripts/campaigns.mjs",
     "check": "tsc --noEmit",
     "test": "vitest run",
     "test:accept": "vitest run --config vitest.accept.config.ts",
     "test:watch": "vitest",
-    "test:browsers": "playwright test"
+    "test:browsers": "playwright test",
+    "test:production": "npm run build && playwright test --config playwright.production.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

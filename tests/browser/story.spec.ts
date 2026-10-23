@@ -77,7 +77,8 @@ test('the Story’s blocks keep their keys; a number changed there moves the yar
   for (let guard = 0; guard < 60 && (await beat(page)) !== 'number'; guard++) {
     await page.evaluate(() => {
       const r = (window as any).fns.story();
-      if (!r.playing && !r.done) r.showMe();
+      if (r.beat?.wait?.kind === 'pick') (document.querySelector('.yards .quarter') as HTMLElement).click();
+      else if (!r.playing && !r.done) r.showMe();
       else r.next();
     });
     await ready(page);
@@ -125,21 +126,22 @@ test('Learn moves on with a scroll or a tap on the yard, and back with a scroll 
 
 // owner, 2026-10-21: "the block sidebar oscillates badly: the right side and the Next button vibrate". It takes
 // real scrollbars (headless hides them): one comes and goes, and the blocks refit to each width in turn
-test('the blocks square holds still: Next and the blocks do not move', async () => {
+test('the blocks square holds still: Next and the blocks do not move', async ({ baseURL }) => {
   const browser = await chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
   for (const [width, height] of [
     [1366, 768],
     [1600, 900],
   ]) {
     const page = await browser.newPage({ viewport: { width, height } });
-    await page.goto('http://localhost:5199/?opening=0');
+    await page.goto(`${baseURL}/?opening=0`);
     await page.waitForFunction(() => (window as any).fns);
     await page.evaluate(() => (document.querySelector('#menu [data-go="story"]') as HTMLElement).click());
     await page.evaluate(() => (window as any).fns.story().enterAct(3));
     for (let guard = 0; guard < 60 && (await beat(page)) !== 'number'; guard++) {
       await page.evaluate(() => {
         const r = (window as any).fns.story();
-        if (!r.playing && !r.done) r.showMe();
+        if (r.beat?.wait?.kind === 'pick') (document.querySelector('.yards .quarter') as HTMLElement).click();
+        else if (!r.playing && !r.done) r.showMe();
         else r.next();
       });
       await ready(page);
@@ -252,10 +254,10 @@ for (const [width, height] of [
   [1366, 768],
   [1280, 720],
 ]) {
-  test(`the panel's squares run from the yard's top to its bottom, the controls whole in theirs (${width}×${height})`, async () => {
+  test(`the panel's squares run from the yard's top to its bottom, the controls whole in theirs (${width}×${height})`, async ({ baseURL }) => {
     const browser = await chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
     const page = await browser.newPage({ viewport: { width, height } });
-    await page.goto('http://localhost:5199/?opening=0');
+    await page.goto(`${baseURL}/?opening=0`);
     await page.waitForFunction(() => (window as any).fns);
     await page.waitForTimeout(1000);
     const m = await page.evaluate(() => {

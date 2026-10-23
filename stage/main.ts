@@ -34,6 +34,8 @@ import { SEED } from './story/beats.ts';
 import { STORY } from './story/words.en.ts';
 import { statsOf } from './core/stats.ts';
 import { YARD } from './core/figure.ts';
+import { incomingShareSource, initAnalyticsLinks, track, trackOnce } from './analytics.ts';
+import { simulationSummary } from './analytics/simulation.ts';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const canvas = $<HTMLCanvasElement>('stage');
@@ -75,6 +77,18 @@ const embed = params.get('embed') === '1' || search.get('embed') === '1';
 /** A fresh visit opens with the logo (owner, 2026-10-18); a link, an embed or ?opening=0 goes straight to the stage; ?opening=7.5 starts it 7.5 s in. */
 const opens = location.hash.length <= 1 && !embed && search.get('opening') !== '0';
 const openAt = Math.max(0, Number(search.get('opening')) || 0);
+let entryChosen = false;
+function chooseEntry(destination: string): boolean {
+  if (!opens || entryChosen) return false;
+  entryChosen = true;
+  trackOnce('entry_choice', { destination });
+  return true;
+}
+initAnalyticsLinks((destination) => {
+  if ((opening || waiting) && ['learn', 'play', 'build', 'about'].includes(destination) && chooseEntry(destination)) return true;
+  const current = tab() === 'story' ? 'learn' : tab() === 'rules' ? 'build' : 'play';
+  return !opening && !waiting && destination === current;
+});
 
 let session: Session;
 let loadError = '';
@@ -99,6 +113,10 @@ if (embed) {
 session.print('Fair and Square — stage and dev console. Nothing here is for readers yet.');
 session.print('try: demo · play · trade 2000 · ccdf · neff · classes · quartiles · room · zoom chart · drag lift · still · fx off · help');
 if (loadError) session.print(`error: link not loaded (${loadError}); fresh room instead`);
+if (location.hash.length > 1 || search.has('fs_share')) trackOnce('shared_link_open', {
+  source: incomingShareSource(location.search), status: loadError || location.hash.length <= 1 ? 'invalid' : 'loaded',
+  ...(!loadError && location.hash.length > 1 ? simulationSummary(session) : {}),
+});
 
 const view = new StageView(canvas);
 setFavicon();
@@ -145,12 +163,14 @@ awaitFonts(fontsReady(), 4000, {
   failed() {
     if (!waiting) return;
     waiting = false;
+    chooseEntry('play');
     session.print('the lettering did not load: no opening, straight to the stage');
     renderLog();
   },
 });
 /** Straight to the stage: Escape, or a command, during the opening. */
 function skipOpening(): void {
+  if (opening || waiting) chooseEntry(storyNext ? 'learn' : 'play');
   waiting = false;
   opening?.skip();
 }
@@ -174,11 +194,12 @@ play.addEventListener('click', () => {
     else skipOpening();
   } else if (drawer.isOpen) drawer.close();
   else if (mode === 'story') leaveStory();
-  else runLine(session.playing ? 'pause' : 'play');
+  else { engage('play'); runLine(session.playing ? 'pause' : 'play'); }
 });
 
 /** A click, a tap, Space or Enter: the held logo starts unfolding; once it is, straight to the stage. */
 function startOrSkip(): void {
+  chooseEntry(storyNext ? 'learn' : 'play');
   if (opening && !opening.started) opening.start();
   else skipOpening();
 }
@@ -190,6 +211,7 @@ let runner: StoryRunner | null = null;
 /** Story was asked for while the logo still held or unfolded: it starts when the stage does. */
 let storyNext = false;
 const host: StoryHost = {
+  analytics: track,
   session: () => session,
   setSession(s) {
     // the room's band (clear of the strip) goes with the story
@@ -241,6 +263,7 @@ const panelView = new Panel($('panel'), () => session);
 // a square's card says how it feels, as its face shows it
 panelView.mood = (i) => view.mood(i);
 const drawer = new RulesDrawer($('rules'), () => session, () => app.classList.toggle('drawing', drawer.isOpen));
+panelView.analyticsContext = () => tab() === 'story' ? 'learn' : tab() === 'rules' ? 'build' : 'play';
 const rulesTab = menu[BUTTONS.findIndex((b) => b.id === 'rules')];
 // Rules is a tab like the others: pressed, it is the one you are in (the story, if you were in it, is left)
 rulesTab.addEventListener('click', () => {
@@ -253,6 +276,17 @@ rulesTab.addEventListener('click', () => {
 function tab(): 'play' | 'story' | 'rules' {
   return drawer.isOpen ? 'rules' : mode;
 }
+function engage(action: string): void {
+  if (mode === 'play' && !drawer.isOpen && !opening && !waiting) trackOnce('play_engaged', { action });
+}
+document.addEventListener('click', (event) => {
+  const control = event.target instanceof Element ? event.target.closest<HTMLElement>('#panel [data-control]') : null;
+  const action = control?.dataset.control;
+  if (action && !['share', 'card-share', 'embed'].includes(action)) engage(action.startsWith('press:') ? 'program_button' : action);
+});
+document.addEventListener('change', (event) => {
+  if (event.target instanceof HTMLInputElement && event.target.matches('#panel input[type="range"]')) engage('slider');
+});
 $('rules').querySelector('.close')!.addEventListener('click', () => drawer.close());
 const drawerPlay = $('rules').querySelector<HTMLButtonElement>('.play')!;
 drawerPlay.addEventListener('click', () => runLine(session.playing ? 'pause' : 'play'));
@@ -367,7 +401,7 @@ window.addEventListener('keydown', (e) => {
   else if (action === 'skip') skipOpening();
   else if (action === 'toggle-console') setConsole(panel.hidden);
   else if (action === 'focus-console') setConsole(true);
-  else if (action === 'play-pause') runLine(session.playing ? 'pause' : 'play');
+  else if (action === 'play-pause') { engage('keyboard_play'); runLine(session.playing ? 'pause' : 'play'); }
   else if (action === 'story-next') runner?.next();
   else if (action === 'story-back') runner?.back();
   else {
@@ -410,6 +444,7 @@ canvas.addEventListener('pointerdown', (e) => {
   tappedAt = e.timeStamp;
   session.ask([i], again ? 'amused' : 'cheer', 1.5);
   if (mode === 'story') return;
+  engage('square');
   if (!embed) runLine(`who ${i}`);
   if (session.drag !== 'off' && session.stage.grab(i, session.drag === 'lift')) {
     holding = true;
@@ -583,6 +618,7 @@ function frame(now: number): void {
       place(lockup, null);
       menu.forEach((el, k) => place(el, opening?.controls[k] ?? null));
       if (opening.done) {
+        chooseEntry(storyNext ? 'learn' : 'play');
         // its faces go on only in the stage it was made for: a command may have rebuilt it meanwhile
         if (opening.belongsTo(session)) view.adopt(opening.field, session);
         opening = null;

@@ -3,3 +3,5 @@ dist/
 *.tsbuildinfo
 test-results/
 playwright-report/
+campaigns.private.*
+campaigns-private/

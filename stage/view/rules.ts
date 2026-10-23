@@ -12,9 +12,18 @@ import { issueText } from '../../blocks/words/issues.en.ts';
 import { PRESET_CARDS } from '../../blocks/words/presets.en.ts';
 import type { Editor } from '../../blocks/editor.ts';
 import type { Session } from '../console/session.ts';
+import { track, trackOnce } from '../analytics.ts';
 
 /** Edits settle this long before they go to the yard, ms. */
 const SETTLE = 150;
+
+/** Library release states: unlisted models stay hidden; their programs remain available to the editor. */
+const LIBRARY_RELEASES: Readonly<Partial<Record<string, 'enabled' | 'disabled'>>> = {
+  'yard-sale': 'enabled',
+  'wealth-tax': 'enabled',
+  advantage: 'disabled',
+  merit: 'disabled',
+};
 
 export class RulesDrawer {
   private readonly root: HTMLElement;
@@ -32,6 +41,7 @@ export class RulesDrawer {
   private timer = 0;
   /** A model picked from the library before the blocks had loaded: loaded when they have. */
   private picked: Program | null = null;
+  private libraryProgram = '';
 
   constructor(root: HTMLElement, session: () => Session, changed: () => void) {
     this.root = root;
@@ -41,16 +51,21 @@ export class RulesDrawer {
     this.status = root.querySelector<HTMLElement>('.status')!;
     const library = root.querySelector<HTMLSelectElement>('select')!;
     for (const p of PRESETS) {
+      const release = LIBRARY_RELEASES[p.id];
+      if (!release) continue;
       const option = document.createElement('option');
       option.value = p.id;
-      option.textContent = PRESET_CARDS[p.id]?.title ?? p.id;
+      option.disabled = release === 'disabled';
+      option.textContent = (PRESET_CARDS[p.id]?.title ?? p.id) + (option.disabled ? ' — coming soon' : '');
       option.title = PRESET_CARDS[p.id]?.see ?? '';
       library.append(option);
     }
     library.addEventListener('change', () => {
-      const p = PRESETS.find((x) => x.id === library.value);
+      const p = LIBRARY_RELEASES[library.value] === 'enabled' ? PRESETS.find((x) => x.id === library.value) : undefined;
       library.value = '';
       if (!p) return;
+      track('model_selected', { model: p.id });
+      this.libraryProgram = canonical(p.program);
       if (this.editor) this.editor.load(p.program);
       else this.picked = p.program;
     });
@@ -101,6 +116,7 @@ export class RulesDrawer {
     this.show(this.session().game.program);
     // a pick made while loading: as if made now (Ctrl+Z takes it back)
     if (this.picked) {
+      this.libraryProgram = canonical(this.picked);
       this.editor.load(this.picked);
       this.picked = null;
     }
@@ -108,6 +124,7 @@ export class RulesDrawer {
 
   /** The blocks of the yard's program. */
   private show(program: Program): void {
+    this.libraryProgram = '';
     this.applied = canonical(program);
     this.editor!.load(program);
     this.say('');
@@ -123,12 +140,14 @@ export class RulesDrawer {
     if (!this.issues.length && json !== this.applied) {
       try {
         this.session().setProgram(read.program);
+        if (json !== this.libraryProgram) trackOnce('build_edited');
         this.applied = json;
       } catch (e) {
         if (!(e instanceof ProgramError)) throw e;
         this.issues = [...e.issues];
       }
     }
+    this.libraryProgram = '';
     this.warned = -1;
     editor.show(this.issues, this.issues.length ? new Map() : this.session().game.run.warnings, this.ids);
     const whole = this.issues.filter((i) => !i.path);

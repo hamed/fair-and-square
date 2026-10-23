@@ -286,7 +286,7 @@ export class Strip {
   private state(r: StoryRunner): void {
     const chosen = r.chosen.get(r.at);
     for (const c of this.choices) c.setAttribute('aria-pressed', String(c.dataset.key === chosen));
-    this.show.hidden = !r.offer || r.done;
+    this.show.hidden = !r.offer || r.done || r.beat?.wait?.kind === 'pick';
     const hint = r.offer && !r.done;
     this.controls.classList.toggle('hint', hint);
     this.guess.classList.toggle('hint', hint);

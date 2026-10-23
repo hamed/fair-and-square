@@ -7,6 +7,9 @@ import type { Pointer } from './cast.ts';
 import { clips } from './clips.ts';
 import { Lockup } from './lockup.ts';
 import { Squares, passItOn } from './squares.ts';
+import { initAnalyticsLinks } from '../analytics.ts';
+
+initAnalyticsLinks();
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 

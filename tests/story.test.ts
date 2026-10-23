@@ -34,13 +34,15 @@ function page(s = new Session({ n: 16 })) {
 }
 
 /** Stand-ins for the page's widgets: they do what the reader would when asked to show. */
-function fakeWidgets(): { widgets: Widgets; log: string[] } {
+function fakeWidgets(): { widgets: Widgets; log: string[]; pick: () => void } {
   const log: string[] = [];
+  let yard: WidgetContext | null = null;
   const make = (name: string, kind: 'picked' | 'edited'): Widget => {
     let ctx: WidgetContext | null = null;
     return {
       mount(c, config) {
         ctx = c;
+        if (name === 'yards') yard = c;
         const told = config.told as { index?: number } | undefined;
         log.push(`${name} mount ${String(config.phase ?? '')}${told ? ` told ${told.index}` : ''}`);
       },
@@ -54,7 +56,8 @@ function fakeWidgets(): { widgets: Widgets; log: string[] } {
       },
     };
   };
-  return { widgets: { yards: make('yards', 'picked'), blocks: make('blocks', 'edited') }, log };
+  return { widgets: { yards: make('yards', 'picked'), blocks: make('blocks', 'edited') }, log,
+    pick: () => yard!.emit({ kind: 'picked', index: 2 }) };
 }
 
 /** Frames until the beat is ready (or `limit` seconds). */
@@ -131,7 +134,7 @@ describe('the runner', () => {
       seen.push(r.beat!.key);
       // a reader in a hurry: Next while it plays finishes it
       if (r.playing) r.next();
-      if (!r.done) r.showMe();
+      if (!r.done) { if (r.beat?.wait?.kind === 'pick') widgets.pick(); else r.showMe(); }
       settle(r, host);
       // a shown drag sweeps the line for a moment
       for (let t = 0; !r.done && t < 3; t += 1 / 30) {
@@ -296,6 +299,9 @@ describe('the runner', () => {
     r.next();
     expect(r.offer).toBe(false);
     expect(r.beat!.key).toBe('which');
+    r.showMe();
+    expect(r.done).toBe(false);
+    expect(r.beat!.key).toBe('which');
   });
 
   it('a widget is told again what the reader chose when Back shows it again', () => {
@@ -309,7 +315,7 @@ describe('the runner', () => {
       settle(r, host);
       r.next();
     }
-    r.showMe();
+    fake.pick();
     expect(r.done).toBe(true);
     // chosen: on at once (no Next), to the draw
     r.frame(1 / 30);
@@ -701,7 +707,8 @@ describe('owner, 2026-10-21: a scroll never cuts', () => {
 describe('owner, 2026-10-21: glitches going back and forth', () => {
   it('through every beat and back again: no errors, and Back never teleports the squares', () => {
     const { host, h } = page();
-    const r = new StoryRunner(h, fakeWidgets().widgets);
+    const fake = fakeWidgets();
+    const r = new StoryRunner(h, fake.widgets);
     r.start();
     const frames = (k: number) => {
       for (let j = 0; j < k; j++) {
@@ -711,7 +718,7 @@ describe('owner, 2026-10-21: glitches going back and forth', () => {
     };
     for (let guard = 0; guard < 400 && !(r.last && r.ready); guard++) {
       if (r.playing) r.next();
-      else if (!r.done) r.showMe();
+      else if (!r.done) { if (r.beat?.wait?.kind === 'pick') fake.pick(); else r.showMe(); }
       else r.next();
       frames(3);
     }

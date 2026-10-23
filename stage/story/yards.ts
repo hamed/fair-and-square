@@ -10,7 +10,7 @@
  *
  * A click on a yard (any phase before the choice) shows its numbers and charts in the panel (`look`, owner
  * 2026-10-22); clicked again, the panel is the page's again. In the pick phase the click is also the choice.
- *   pick   each is a button: the reader picks the one they would live in (`picked`); Show me picks for them
+ *   pick   each is a button: the reader picks the one they would live in (`picked`); never chosen for them
  *   grow   the chosen one grows to fill the yard and becomes the story's yard (its session, adopted); the rest fade
  *
  * Each yard is a Session and a StageView of its own: the same stage, smaller.
@@ -20,6 +20,7 @@ import { parseRecipe } from '../core/recipe.ts';
 import { StageView } from '../view/render.ts';
 import { STORY } from './words.en.ts';
 import type { Widget, WidgetContext } from './widgets.ts';
+import { simulationSummary } from '../analytics/simulation.ts';
 
 /**
  * The yards' rules: very unequal, between, very equal; dramatic, so each shows what it is within seconds (owner,
@@ -131,10 +132,7 @@ export class YardsWidget implements Widget {
 
   config(config: Readonly<Record<string, unknown>>): void {
     const phase = String(config.phase ?? this.phase);
-    if (config.showMe && this.phase === 'pick' && this.chosen < 0) {
-      this.pick(Math.floor(Math.random() * this.yards.length));
-      return;
-    }
+    if (config.showMe) return;
     if (phase !== 'grow') {
       // back before the choice: nothing chosen, nothing grown
       this.chosen = -1;
@@ -216,13 +214,17 @@ export class YardsWidget implements Widget {
     if (this.phase !== 'pick' || this.chosen >= 0) return;
     this.chosen = k;
     this.yards.forEach((y, j) => y.el.classList.toggle('chosen', j === k));
-    this.ctx?.emit({ kind: 'picked', index: k, ...this.yards[k].rules });
+    const yard = this.yards[k];
+    this.ctx?.emit({ kind: 'picked', index: k, ...yard.rules, analytics: {
+      ...simulationSummary(yard.session), yard_id: `stake_${yard.rules.beta}_tax_${yard.rules.tax}`,
+      stake: yard.rules.beta, tax: yard.rules.tax, position: k + 1,
+    } });
   }
 
   /** The chosen yard fills the big one and becomes the story's yard; the others fade. */
   private grow(): void {
     const ctx = this.ctx;
-    if (this.chosen < 0) this.chosen = 0;
+    if (this.chosen < 0) return;
     this.yards.forEach((y, j) => y.el.classList.toggle('chosen', j === this.chosen));
     const y = this.yards[this.chosen];
     if (!ctx || !y) return;

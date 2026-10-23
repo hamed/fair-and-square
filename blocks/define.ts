@@ -6,7 +6,7 @@
  */
 import * as Blockly from 'blockly/core';
 import { ORDER, type Category, type OpSpec, type ValueType } from '../model/catalogue.ts';
-import { BLOCKS, SHOW_BADGE } from './words/blocks.en.ts';
+import { BLOCKS, CONNECTORS, SHOW_BADGE } from './words/blocks.en.ts';
 
 /** Catalogue types as Blockly connection checks ('Boolean' is what zelos draws as a hexagon). */
 const CHECK: Readonly<Record<ValueType, string>> = {
@@ -41,6 +41,12 @@ class Dropdown extends Blockly.FieldDropdown {
     return new Dropdown(options.options!, undefined, options);
   }
 
+  protected override doValueUpdate_(value: string): void {
+    super.doValueUpdate_(value);
+    const block = this.getSourceBlock();
+    if (block && ((block.type === 'op.fn2' && this.name === 'fn') || (block.type === 'stat.of' && this.name === 'stat'))) updateSentence(block, value);
+  }
+
   protected override getClickTarget_(): Element | null {
     const target = super.getClickTarget_();
     const bound = (target as { mouseOverWrapper_?: unknown[] } | null)?.mouseOverWrapper_;
@@ -51,6 +57,23 @@ class Dropdown extends Blockly.FieldDropdown {
   override dispose(): void {
     this.disposing = true;
     super.dispose();
+  }
+}
+
+/** Change only presentation: keep dropdown values, inputs and their connections intact. */
+function updateSentence(block: Blockly.Block, value: string): void {
+  if (block.type === 'op.fn2' && block.getInput('function') && block.getInput('b')) {
+    const power = value === 'power';
+    if (power && block.inputList[0].name !== 'a') block.moveInputBefore('a', 'function');
+    else if (!power && block.inputList[0].name !== 'function') block.moveInputBefore('function', 'a');
+    block.getField('OF')!.setVisible(!power);
+    block.getField('AND')!.setVisible(!power);
+  } else if (block.type === 'stat.of' && block.getField('IN')) {
+    const fraction = value === 'fraction';
+    block.getField('OF')!.setVisible(!fraction);
+    block.getField('prop')!.setVisible(!fraction);
+    block.getField('OVER')!.setVisible(!fraction);
+    block.getField('IN')!.setVisible(fraction);
   }
 }
 
@@ -96,12 +119,30 @@ function definitionOf(spec: OpSpec): Record<string, unknown> {
     json.nextStatement = null;
   }
   if (spec.kind === 'reporter') json.output = CHECK[spec.output!];
+  // Separate inline inputs let a dropdown move between operands without replacing its fields or connections.
+  const label = (name: string, text: string) => ({ type: 'field_label', name, text });
+  if (spec.id === 'op.fn2') {
+    json.message0 = '%1 %2 %3 %4 %5 %6';
+    json.args0 = [argOf(spec, 'fn'), label('OF', CONNECTORS.of), { type: 'input_dummy', name: 'function' }, argOf(spec, 'a'), label('AND', CONNECTORS.and), argOf(spec, 'b')];
+    json.extensions = ['fns_sentence'];
+  } else if (spec.id === 'stat.of') {
+    json.message0 = '%1 %2 %3 %4 %5 %6 %7 %8';
+    json.args0 = [
+      argOf(spec, 'stat'), label('OF', CONNECTORS.of), { type: 'input_dummy', name: 'measure' },
+      argOf(spec, 'prop'), label('OVER', CONNECTORS.over), { type: 'input_dummy', name: 'property' },
+      label('IN', CONNECTORS.in), argOf(spec, 'over'),
+    ];
+    json.extensions = ['fns_sentence'];
+  }
   return json;
 }
 
 /** Register every block (once). */
 export function defineBlocks(): void {
   if (!Blockly.registry.hasItem(Blockly.registry.Type.FIELD, 'field_fns_dropdown')) Blockly.fieldRegistry.register('field_fns_dropdown', Dropdown);
+  if (!Blockly.Extensions.isRegistered('fns_sentence')) Blockly.Extensions.register('fns_sentence', function (this: Blockly.Block) {
+    updateSentence(this, this.getFieldValue(this.type === 'op.fn2' ? 'fn' : 'stat'));
+  });
   const fresh = ORDER.filter((spec) => !Blockly.Blocks[spec.id]);
   if (fresh.length) Blockly.common.defineBlocks(Blockly.common.createBlockDefinitionsFromJsonArray(fresh.map(definitionOf)));
 }

@@ -1,6 +1,6 @@
 import * as Blockly from 'blockly/core';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { BODY, fromBlockly, toBlockly, type WorkspaceState } from '../../blocks/convert.ts';
+import { BODY, blockOf, fromBlockly, toBlockly, type WorkspaceState } from '../../blocks/convert.ts';
 import { defineBlocks } from '../../blocks/define.ts';
 import { num, type Node, type Program } from '../../model/ast.ts';
 import { OPS, defaultNode } from '../../model/catalogue.ts';
@@ -138,14 +138,72 @@ describe('recheck 3, N11: an untouched percentage comes back exactly', () => {
 });
 
 describe('owner, 2026-10-21: a long row breaks in two', () => {
-  it('"the loser pays" on one row, its stake on the next; the round trip unchanged', () => {
+  it('"loser pays" on one row, its stake on the next; the round trip unchanged', () => {
     defineBlocks();
     const ws = new Blockly.Workspace();
     const pay = ws.newBlock('trade.pay');
     const kinds = pay.inputList.map((i) => i.type);
     expect(kinds).toEqual([Blockly.inputs.inputTypes.END_ROW, Blockly.inputs.inputTypes.VALUE]);
-    expect(pay.inputList[0].fieldRow.map((f) => f.getText()).join(' ')).toBe('the loser pays');
+    expect(pay.inputList[0].fieldRow.map((f) => f.getText()).join(' ')).toBe('loser pays');
     expect(pay.inputList[1].name).toBe('stake');
     ws.dispose();
+  });
+});
+
+describe('compact function and statistic sentences', () => {
+  beforeAll(() => defineBlocks());
+
+  it('moves the power dropdown between the same operands, including after serialisation', () => {
+    const ws = new Blockly.Workspace();
+    try {
+      const node: Node = { op: 'op.fn2', f: { fn: 'power' }, args: { a: num(2), b: num(3) } };
+      const block = Blockly.serialization.blocks.append(blockOf(node), ws);
+      const a = block.getInputTargetBlock('a');
+      const b = block.getInputTargetBlock('b');
+      for (const fn of ['power', 'min', 'max', 'power']) {
+        block.setFieldValue(fn, 'fn');
+        expect(block.inputList.map((i) => i.name)).toEqual(fn === 'power' ? ['a', 'function', 'b'] : ['function', 'a', 'b']);
+        expect(block.getField('OF')!.isVisible()).toBe(fn !== 'power');
+        expect(block.getField('AND')!.isVisible()).toBe(fn !== 'power');
+        expect(block.getInputTargetBlock('a')).toBe(a);
+        expect(block.getInputTargetBlock('b')).toBe(b);
+      }
+      const state = Blockly.serialization.blocks.save(block)!;
+      block.dispose();
+      const restored = Blockly.serialization.blocks.append(state, ws);
+      expect(restored.inputList.map((i) => i.name)).toEqual(['a', 'function', 'b']);
+      expect(restored.getField('fn')!.getText()).toBe('^');
+      expect(restored.getInputTargetBlock('a')!.getFieldValue('v')).toBe(2);
+      expect(restored.getInputTargetBlock('b')!.getFieldValue('v')).toBe(3);
+    } finally {
+      ws.dispose();
+    }
+  });
+
+  it('hides the unused property for group fraction without losing its saved selection or group', () => {
+    const ws = new Blockly.Workspace();
+    try {
+      const node: Node = { op: 'stat.of', f: { stat: 'fraction', prop: 'talent' }, args: { over: defaultNode('group.richest') } };
+      const block = Blockly.serialization.blocks.append(blockOf(node), ws);
+      const group = block.getInputTargetBlock('over');
+      for (const stat of ['fraction', 'mean', 'rankcorr', 'fraction']) {
+        block.setFieldValue(stat, 'stat');
+        for (const field of ['OF', 'prop', 'OVER']) expect(block.getField(field)!.isVisible()).toBe(stat !== 'fraction');
+        expect(block.getField('IN')!.isVisible()).toBe(stat === 'fraction');
+        expect(block.getFieldValue('prop')).toBe('talent');
+        expect(block.getInputTargetBlock('over')).toBe(group);
+      }
+      const state = Blockly.serialization.blocks.save(block)!;
+      expect(state.fields).toMatchObject({ stat: 'fraction', prop: 'talent' });
+      block.dispose();
+      const restored = Blockly.serialization.blocks.append(state, ws);
+      expect(restored.getField('prop')!.isVisible()).toBe(false);
+      restored.setFieldValue('mean', 'stat');
+      expect(restored.getFieldValue('prop')).toBe('talent');
+      expect(restored.getField('prop')!.isVisible()).toBe(true);
+      expect(restored.getInputTargetBlock('over')!.type).toBe('group.richest');
+    } finally {
+      ws.dispose();
+    }
   });
 });

@@ -16,6 +16,7 @@ import { ACT_STARTS, BEATS, SNAP, linesOf, type Beat } from './beats.ts';
 import { STORY, type ChoiceKey } from './words.en.ts';
 import type { Widget, WidgetEvent, Widgets } from './widgets.ts';
 import type { Showing } from '../view/panel.ts';
+import type { AnalyticsData, AnalyticsEvent } from '../analytics.ts';
 
 /** The page the story plays on. */
 export interface StoryHost {
@@ -23,6 +24,7 @@ export interface StoryHost {
   setSession(s: Session): void;
   /** The story is over, or left. */
   ended(): void;
+  analytics?(event: AnalyticsEvent, data: AnalyticsData): void;
 }
 
 interface Checkpoint {
@@ -38,6 +40,7 @@ const REST = 0.6;
 const SECOND_AFTER = 1.6;
 /** The script name the story's lines run under. */
 const SCRIPT = 'story';
+let runSequence = 0;
 
 export class StoryRunner {
   readonly beats: readonly Beat[];
@@ -77,6 +80,13 @@ export class StoryRunner {
   private sweepFrom = 0;
   private readonly host: StoryHost;
   private readonly widgets: Widgets;
+  private analyticsRun = 0;
+  private readonly actsSeen = new Set<number>();
+  private readonly questionsSeen = new Set<string>();
+  private readonly answers = new Map<string, { answer: string; attempt: number }>();
+  private usedHelp = false;
+  private skipped = false;
+  private completed = false;
   /** A button's lines running (the strip's Play), not the beat's own. */
 
   constructor(host: StoryHost, widgets: Widgets = {}, beats: readonly Beat[] = BEATS) {
@@ -119,11 +129,21 @@ export class StoryRunner {
 
   /** From the first beat (or any): the session goes on from where it is. */
   start(at = 0): void {
+    this.analyticsRun = 0;
+    this.actsSeen.clear();
+    this.questionsSeen.clear();
+    this.answers.clear();
+    this.usedHelp = this.skipped = this.completed = false;
     this.go(at);
   }
 
   /** Into act `a` directly: its yard built at once, then its first beat. */
-  enterAct(a: number): void {
+  enterAct(a: number, action: 'jump_act' | null = 'jump_act'): void {
+    if (action) {
+      this.ensureAnalytics();
+      this.skipped ||= a > this.act;
+      this.emit('learn_action', { action, act: this.act + 1, beat: this.beat?.key ?? '', destination_act: a + 1 });
+    }
     const k = ACT_STARTS[Math.max(0, Math.min(ACT_STARTS.length - 1, a))];
     const enter = this.beats[k].enter;
     if (enter) {
@@ -189,7 +209,7 @@ export class StoryRunner {
     if (k < 0) return this.go(Math.max(0, this.at));
     const cp = this.checkpoints[k];
     if (!cp) {
-      this.enterAct(this.beats[k].act);
+      this.enterAct(this.beats[k].act, null);
       return;
     }
     this.restore(cp);
@@ -198,9 +218,12 @@ export class StoryRunner {
 
   /** The next act's first beat (Skip act); past the last, the end. */
   skipAct(): void {
+    this.ensureAnalytics();
+    this.skipped = true;
+    this.emit('learn_action', { action: 'skip_act', act: this.act + 1, beat: this.beat?.key ?? '' });
     const a = this.act + 1;
     if (a >= ACT_STARTS.length) return this.end();
-    this.enterAct(a);
+    this.enterAct(a, null);
   }
 
   /** The story is over (or left): what it put on top comes off; the yard stays as it is. */
@@ -255,8 +278,13 @@ export class StoryRunner {
   }
 
   /** The reader's guess. */
-  choose(key: ChoiceKey): void {
+  choose(key: ChoiceKey, method: 'manual' | 'assisted' = 'manual'): void {
     if (!this.beat?.controls?.choices?.includes(key)) return;
+    const s = this.session;
+    const pair = s.pairs;
+    const [a, b] = pair && pair.length >= 2 ? [pair[0], pair[1]] : [0, 1];
+    const [left, right] = s.stage.x[a] <= s.stage.x[b] ? [a, b] : [b, a];
+    this.answer('prediction', key, { method, left_share: s.game.wealth[left], right_share: s.game.wealth[right] });
     this.chosen.set(this.at, key);
     this.host.session().run('face all curious; face all camera 2');
     if (this.beat.wait?.kind === 'choose') this.satisfy();
@@ -292,7 +320,9 @@ export class StoryRunner {
   showMe(): void {
     const b = this.beat;
     const w = b?.wait;
-    if (!b || !w || this.done) return;
+    if (!b || !w || this.done || w.kind === 'pick') return;
+    this.usedHelp = true;
+    this.emit('learn_action', { action: 'help', act: this.act + 1, beat: b.key });
     const s = this.host.session();
     if (w.kind === 'slide') {
       const name = w.name === '*' ? (b.controls?.sliders?.[0] ?? 'stake') : w.name;
@@ -305,7 +335,7 @@ export class StoryRunner {
       this.slide(name, w.to ?? (now - step >= (spec?.min ?? 0) ? now - step : now + step));
     } else if (w.kind === 'choose') {
       const options = b.controls?.choices ?? [];
-      if (options.length) this.choose(options[0]);
+      if (options.length) this.choose(options[0], 'assisted');
     } else if (w.kind === 'split') {
       this.split(s.split > 0.5 ? 0.35 : 0.65);
     } else if (w.kind === 'drag') {
@@ -454,6 +484,20 @@ export class StoryRunner {
     // the beat starts here: kept, so Back can play it again exactly
     this.checkpoints[k] = { hash: s.share(), view: s.viewState() };
     this.at = k;
+    this.ensureAnalytics();
+    if (!this.actsSeen.has(b.act)) {
+      this.actsSeen.add(b.act);
+      this.emit('learn_progress', { act: b.act + 1 });
+    }
+    const question = b.wait?.kind === 'choose' ? 'prediction' : b.wait?.kind === 'pick' ? 'yard' : '';
+    if (question && !this.questionsSeen.has(question)) {
+      this.questionsSeen.add(question);
+      this.emit('learn_choice_shown', { question });
+    }
+    if (b.key === 'open' && !this.completed) {
+      this.completed = true;
+      this.emit('learn_complete', { skipped: this.skipped, assisted: this.usedHelp });
+    }
     this.met = false;
     this.offer = false;
     this.idle = 0;
@@ -514,6 +558,7 @@ export class StoryRunner {
   private event(e: WidgetEvent): void {
     if (this.mounted) this.told.set(this.mounted.name, e);
     const w = this.beat?.wait;
+    if (e.kind === 'picked' && w?.kind === 'pick') this.answer('yard', String(e.analytics?.yard_id ?? `position_${e.index}`), { ...e.analytics, method: 'manual' });
     if ((e.kind === 'picked' && w?.kind === 'pick') || (e.kind === 'edited' && w?.kind === 'edit')) this.satisfy();
     this.touch();
   }
@@ -523,6 +568,24 @@ export class StoryRunner {
     this.met = true;
     this.offer = false;
     this.touch();
+  }
+
+  private ensureAnalytics(): void {
+    if (this.analyticsRun) return;
+    this.analyticsRun = ++runSequence;
+    this.emit('learn_start');
+  }
+
+  private emit(event: AnalyticsEvent, data: AnalyticsData = {}): void {
+    this.host.analytics?.(event, { ...data, run: this.analyticsRun });
+  }
+
+  private answer(question: string, answer: string, data: AnalyticsData): void {
+    const previous = this.answers.get(question);
+    if (previous?.answer === answer) return;
+    const attempt = (previous?.attempt ?? 0) + 1;
+    this.answers.set(question, { answer, attempt });
+    this.emit('learn_choice', { ...data, question, answer, attempt });
   }
 
   private touch(): void {

@@ -575,7 +575,7 @@ body {
 
 .drawer {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   min-block-size: 0;
   min-inline-size: 0;
   background: var(--floor);
@@ -615,6 +615,17 @@ body {
 
 .drawer-bar .status.bad {
   color: #a23b2a;
+}
+
+.library-note {
+  margin: 0;
+  padding: 6px 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.library-note a {
+  color: var(--brown);
 }
 
 .drawer .blocks {
@@ -1193,6 +1204,11 @@ body {
 .yards .quarter.looked {
   outline: 3px solid var(--muted);
   outline-offset: -3px;
+}
+
+.yards[data-phase='pick'] .quarter {
+  outline: 2px solid var(--glow);
+  outline-offset: -2px;
 }
 
 .yards[data-phase='pick'] .quarter:hover,

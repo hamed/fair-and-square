@@ -636,6 +636,7 @@ npm run dev        # the stage
 npm test           # headless tests, one worker
 npm run test:accept   # the model's acceptance table (~45 s)
 npm run test:browsers # determinism in Chromium, Firefox, WebKit
+npm run test:production # build, then check links and replay at /fair-and-square/ in Chromium
 npm run check      # TypeScript, strict
 npm run build      # check + production build into dist/
 ```

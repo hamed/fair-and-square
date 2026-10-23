@@ -6,7 +6,8 @@
     <title>Fair and Square</title>
     <link rel="stylesheet" href="./stage/stage.css" />
     <!-- visits, counted without cookies: Umami (only on the live site), and Cloudflare Web Analytics -->
-    <script defer src="https://cloud.umami.is/script.js" data-website-id="c5d80ef0-c590-4d88-912a-e03a62713536" data-domains="hamed.github.io"></script>
+    <script src="./analytics-init.js"></script>
+    <script async src="https://cloud.umami.is/script.js" data-website-id="c5d80ef0-c590-4d88-912a-e03a62713536" data-domains="hamed.github.io" data-exclude-hash="true" data-before-send="fsUmamiBeforeSend"></script>
     <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "1cb094ae39f146fcbb7e2938e2c3d3f5"}'></script><!-- End Cloudflare Web Analytics -->
   </head>
   <body>
@@ -14,9 +15,9 @@
       <!-- first in focus order: the tabs and the name, drawn on the line above the yard; then the Story's strip -->
       <!-- the tabs in their order; their words come from stage/words.en.ts -->
       <nav id="menu" class="menu" aria-label="Fair and Square">
-        <button type="button" data-go="story" hidden></button>
-        <button type="button" data-go="play" hidden></button>
-        <button type="button" data-go="rules" hidden></button>
+        <button type="button" data-go="story" data-track-nav="learn" data-track-source="menu" hidden></button>
+        <button type="button" data-go="play" data-track-nav="play" data-track-source="menu" hidden></button>
+        <button type="button" data-go="rules" data-track-nav="build" data-track-source="menu" hidden></button>
         <a data-go="finds" aria-disabled="true" title="soon" hidden></a>
         <a data-go="about" href="./about.html" target="_blank" rel="noopener" hidden></a>
       </nav>
@@ -48,8 +49,9 @@
             <option value="">Library…</option>
           </select>
           <span class="status" aria-live="polite"></span>
-          <button type="button" class="close" aria-label="Close Build">×</button>
+          <button type="button" class="close" aria-label="Close Build" data-track-nav="play" data-track-source="build_close">×</button>
         </header>
+        <p class="library-note">More models coming soon. <a href="./about.html#elsewhere" target="_blank" rel="noopener" data-track-source="library_follow">Follow me for new releases →</a></p>
         <div class="blocks" aria-label="The program, as blocks"></div>
       </section>
       <button id="toggle" class="toggle" type="button" aria-expanded="true" title="console ( ` )">›_</button>

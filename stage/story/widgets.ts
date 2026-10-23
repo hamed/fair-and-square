@@ -3,10 +3,12 @@
  * knows this contract and the names beats give (a registry the page fills); it never knows what a widget is.
  */
 import type { Session } from '../console/session.ts';
+import type { AnalyticsData } from '../analytics.ts';
 
 /** Something a widget tells the story: `picked` (a choice the reader made), `edited` (the program changed). */
 export interface WidgetEvent {
   readonly kind: 'picked' | 'edited';
+  readonly analytics?: AnalyticsData;
   readonly [k: string]: unknown;
 }
 

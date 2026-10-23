@@ -109,7 +109,8 @@ function toolbox(): Blockly.utils.toolbox.ToolboxDefinition {
       // each section under its heading; a step block comes with its steps (locked in place), everything else
       // with its slots' shadows
       contents: SECTIONS[category].flatMap((section) => {
-        const nodes = ORDER.filter((spec) => spec.section === section && !spec.step).map((spec) => defaultNode(spec.id));
+        // A plain number sets a fixed stake; keep the old block loadable for existing models and links.
+        const nodes = ORDER.filter((spec) => spec.section === section && !spec.step && spec.id !== 'stake.fixed').map((spec) => defaultNode(spec.id));
         nodes.push(...(EXTRA[section] ?? []));
         if (!nodes.length) return [];
         return [
