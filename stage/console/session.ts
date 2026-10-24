@@ -995,7 +995,7 @@ export class Session {
    * part it is drawn in (world), and a count, so the page flies each once.
    */
   handoff: { kind: string; box: { x: number; y: number; w: number; h: number }; id: number } | null = null;
-  /** The charts handed over so far: Learn shows their squares. */
+  /** The charts photographed so far: Learn and Play reveal their squares after handoff. */
   charted = new Set<string>();
 
   /** Who built this yard and where they are (a shared link's `by`, `by-url`), shown in its corner; null for most. */

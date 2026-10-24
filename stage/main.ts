@@ -562,16 +562,18 @@ canvas.addEventListener('pointerleave', () => (view.pointer = null));
 
 /** The last chart flown to its square (the session's handoff count). */
 let flown = 0;
+let flownSession: Session | null = null;
 /**
  * A chart taught in the yard goes to its square in the panel (owner, 2026-10-21): a picture of it, cut from the
- * canvas, shrinks and flies there; the square, hidden meanwhile, shows as it lands. In Learn only.
+ * canvas, shrinks and flies there; the square, hidden meanwhile, shows as it lands, in Learn and Play.
  */
 /** A handoff's print: its white border, CSS px (stage.css .flight.print). */
 const PRINT_BORDER = 6;
 function flyHandoff(): void {
+  if (session !== flownSession) { flownSession = session; flown = 0; }
   const h = session.handoff;
   if (!h || h.id === flown) return;
-  const tile = mode === 'story' ? panelView.tile(h.kind) : null;
+  const tile = panelView.tile(h.kind);
   if (!tile) {
     flown = h.id;
     return;
@@ -678,6 +680,14 @@ function frame(now: number): void {
         if (storyNext) {
           storyNext = false;
           enterStory();
+        } else if (!drawer.isOpen) {
+          // Let the equal squares hold the box for two seconds, then toggle its default formation off.
+          const initial = session;
+          const recipe = initial.recipe;
+          const stage = initial.stage;
+          setTimeout(() => {
+            if (mode === 'play' && !drawer.isOpen && session === initial && initial.stage === stage && initial.recipe === recipe && recipe.pose === 'fold') initial.run('room');
+          }, 2000);
         }
       }
     }

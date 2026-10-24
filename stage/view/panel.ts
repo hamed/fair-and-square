@@ -28,8 +28,8 @@ import { simulationSummary } from '../analytics/simulation.ts';
 const EVERY = 200;
 /** Log a dragged slider into the run at most this often, ms (and once more when it is let go). */
 const DRAG_EVERY = 100;
-/** The speed slider's ends, rounds a second; up to this many trades are shown as pieces, faster ones at once. */
-const SPEED = { min: 1, max: 1000 };
+/** The slowest round pace; up to SHOWN_UP_TO rounds a second, pieces can show every trade. */
+const MIN_ROUNDS = 1;
 const SHOWN_UP_TO = 3;
 /** Fast forward's pace, rounds a second; the slowest the animations go (Slower, past a round a second). */
 const FAST = 100;
@@ -50,20 +50,21 @@ const SCROLLBAR = 18;
  * standing. Line up stands them by side = money, so the row is the box's width, not the yard's many times over
  * (owner, 2026-10-22); CCDF, N_eff and Lorenz are Learn's three charts, in the room (owner: "they are fun").
  */
-const ARRANGE: readonly { word: string; tip: string; icon: IconName; run: string; id: string; is: (r: Recipe, s: Session) => boolean }[] = [
+const ARRANGE: readonly { word: string; tip: string; icon: IconName; run: string; id: string; photo?: string; is: (r: Recipe, s: Session) => boolean }[] = [
   // from the room: bars, prints and squared sides put away first (owner, 2026-10-22: bars wandered, prints piled up)
   { word: WORDS.panel.wander, tip: WORDS.panel.arrangeTip, icon: 'wander', run: 'guide off; room; wander', id: 'wander', is: (r) => r.pose === 'wander' && r.shape === 'square' && r.size === 'natural' && !r.prints },
   { word: WORDS.panel.box, tip: WORDS.panel.arrangeTip, icon: 'box', run: 'guide off; room; pose fold', id: 'box', is: (r) => r.pose === 'fold' && r.size === 'natural' && r.group === 'none' && !r.prints },
   { word: WORDS.panel.lineUp, tip: WORDS.panel.arrangeTip, icon: 'lineup', run: 'guide off; room; pose squared asc row', id: 'lineup', is: (r) => r.pose === 'row' && r.order === 'asc' && r.size === 'squared' },
   // its trades shown too: each off the loser's right end, onto the winner's (owner, 2026-10-22)
-  { word: WORDS.panel.ccdf, tip: WORDS.panel.ccdfTip, icon: 'ccdf', run: 'guide off; room; ccdf; fx chart on; guide line 0.5', id: 'ccdf', is: (r) => r.pose === 'stack' && r.shape === 'bar' },
-  { word: WORDS.panel.neff, tip: WORDS.panel.neffTip, icon: 'neff', run: 'guide off; room; neff', id: 'neff', is: (r) => r.prints },
+  { word: WORDS.panel.ccdf, tip: WORDS.panel.ccdfTip, icon: 'ccdf', run: 'guide off; room; ccdf; fx chart on; guide line 0.5', id: 'ccdf', photo: 'ccdf', is: (r) => r.pose === 'stack' && r.shape === 'bar' },
+  { word: WORDS.panel.neff, tip: WORDS.panel.neffTip, icon: 'neff', run: 'guide off; room; neff', id: 'neff', photo: 'neff', is: (r) => r.prints },
   {
     word: WORDS.panel.lorenz,
     icon: 'lorenz',
     tip: WORDS.panel.lorenzTip,
     run: 'guide off; room; pose squared asc stack; until done; pose tower; until done; pose stairs; until done; guide lorenz; until done; guide lorenz even; until done; wait 0.6; guide lorenz gap; until done; wait 0.6; guide lorenz gauge',
     id: 'lorenz',
+    photo: 'lorenz',
     is: (r, s) => r.pose === 'stairs' || r.pose === 'tower' || s.guide?.kind === 'lorenz',
   },
 ];
@@ -131,7 +132,6 @@ export class Panel {
   private lit = '';
   private extra: HTMLElement | null = null;
   private arrange: HTMLButtonElement[] = [];
-  private speed: { input: HTMLInputElement; value: HTMLOutputElement } | null = null;
   private squares: { input: HTMLInputElement; value: HTMLOutputElement; dragging: boolean } | null = null;
   /** The rounds a second asked for (null: the session's own pace), kept through a change of N. */
   private pace: number | null = null;
@@ -324,7 +324,7 @@ export class Panel {
     this.readouts = [];
     this.plots = [];
     // the run: play and pause, one round, back to round 0
-    this.applied = '';
+    this.applied = '\u0000';
     // the well-known ones as icons (owner, 2026-10-22), each saying its word on hover and to screen readers
     this.play = this.control(WORDS.panel.play, 'play or pause (space)', () => this.session().run(this.session().playing ? 'pause' : 'play'), 'run', this.bar, 'play');
     wear(this.play, 'play', WORDS.panel.play, WORDS.panel.playTip);
@@ -351,7 +351,9 @@ export class Panel {
         const s = this.session();
         // the latest choice wins: a sequence still running (Lorenz's) stops here (recheck 2026-10-22)
         s.script = null;
-        s.run(this.arranged() === a.id ? 'fx chart off; guide off; room' : a.id === 'ccdf' ? a.run : `fx chart off; ${a.run}`);
+        const arrange = a.id === 'ccdf' ? a.run : `fx chart off; ${a.run}`;
+        const photo = a.photo ? `; until done; handoff ${a.photo}${a.photo === 'lorenz' ? '; wait 2; handoff gini' : ''}` : '';
+        s.run(this.arranged() === a.id ? 'fx chart off; guide off; room' : `${a.photo ? 'pause; finish; ' : ''}${arrange}${photo}`);
       }, 'arrange', this.view, a.id);
       wear(b, a.icon, a.word, a.tip);
       b.setAttribute('aria-pressed', 'false');
@@ -365,7 +367,7 @@ export class Panel {
     // (its icon the one chosen), kept through a new yard
     this.levelButton = this.control(WORDS.panel.level, '', () => this.setLevel(LEVELS[(LEVELS.indexOf(this.level) + 1) % LEVELS.length]), 'level', this.people, 'level');
     this.showLevel();
-    this.knobs.append(this.speedSlider(), this.squaresSlider());
+    this.knobs.append(this.squaresSlider());
     for (const sl of spec.sliders) this.knobs.append(this.slider(sl));
     this.knobs.hidden = !spec.sliders.length;
     for (const name of spec.buttons) this.control(name, `the program's “${name}” button`, () => this.session().press(name), 'press', this.bar, `press:${name}`);
@@ -578,7 +580,7 @@ export class Panel {
   private reveal(): void {
     // a yard looked at: its numbers and charts, none of its controls (its rules stay hidden)
     const show = this.focused ? FOCUSED : this.showing;
-    const key = (this.focused ? 'focus ' : '') + (show ? JSON.stringify(show) : '');
+    const key = (this.focused ? 'focus ' : '') + (show ? JSON.stringify(show) : [...this.session().charted].join(','));
     if (key === this.applied) return;
     this.applied = key;
     for (const el of this.root.querySelectorAll<HTMLElement>('[data-control]')) el.hidden = !!show && !show.controls.includes(el.dataset.control!);
@@ -599,12 +601,12 @@ export class Panel {
       }
     }
     for (const row of [this.bar, this.view, this.people, this.knobs]) row.hidden = ![...row.children].some((c) => !(c as HTMLElement).hidden);
-    const shows = (kind: string) => !show || show.charts === true || (Array.isArray(show.charts) && show.charts.includes(kind));
-    for (const r of this.readouts) r.cell.hidden = !shows(r.kind);
+    const shows = (kind: string) => show ? show.charts === true || (Array.isArray(show.charts) && show.charts.includes(kind)) : this.session().charted.has(kind);
+    for (const r of this.readouts) r.cell.hidden = !!show && !shows(r.kind);
     this.numbers.hidden = this.readouts.every((r) => r.cell.hidden);
     for (const p of this.plots) p.tile.hidden = !shows(p.kind);
     // Play's own (Learn does not teach it), and not while a yard is only looked at
-    this.turnover.tile.hidden = !!show;
+    this.turnover.tile.hidden = !!show || !this.session().charted.has('turnover');
     this.note.hidden = !this.focused;
     this.controls.hidden = !this.lead && [this.bar, this.view, this.people, this.knobs, this.numbers, this.note].every((r) => r.hidden);
     this.root.hidden = this.controls.hidden && this.plots.every((p) => p.tile.hidden);
@@ -695,37 +697,11 @@ export class Panel {
     const s = this.session();
     const now = this.arranged();
     this.arrange.forEach((b, k) => b.setAttribute('aria-pressed', String(ARRANGE[k].id === now)));
-    const pairs = Math.max(1, Math.floor(s.game.n / 2));
-    if (this.speed && document.activeElement !== this.speed.input) {
-      const rounds = s.tradeRate / pairs;
-      this.speed.input.value = String(toUnit(rounds, SPEED.min, SPEED.max));
-      this.speed.value.textContent = WORDS.panel.perSecond.replace('{k}', String(+rounds.toPrecision(2)));
-    }
     if (this.squares && !this.squares.dragging) {
       this.squares.input.value = String(Math.min(SIDE.max, Math.max(SIDE.min, Math.round(Math.sqrt(s.game.n)))));
       this.squares.input.setAttribute('aria-valuetext', squaresSaid(s.game.n));
       this.squares.value.textContent = String(s.game.n);
     }
-  }
-
-  /** Rounds a second, on a log scale: slow enough to watch every trade, or fast enough for a thousand rounds. */
-  private speedSlider(): HTMLElement {
-    const { label, input, value } = this.knob(WORDS.panel.speed);
-    input.addEventListener('input', () => {
-      const rounds = fromUnit(Number(input.value), SPEED.min, SPEED.max);
-      this.pace = rounds;
-      // the reader's own pace: fast forward is off (what it hid shown again), animations at their own speed
-      const s = this.session();
-      if (this.fastShown) s.run(`fx trade ${this.fastShown.trade}; fx tax ${this.fastShown.tax ? 'on' : 'off'}`);
-      this.fastShown = null;
-      this.fastFrom = null;
-      this.fast?.setAttribute('aria-pressed', 'false');
-      if (s.speed !== 1) s.run('speed 1');
-      value.textContent = WORDS.panel.perSecond.replace('{k}', String(+rounds.toPrecision(2)));
-      this.setPace(rounds);
-    });
-    this.speed = { input, value };
-    return label;
   }
 
   private setPace(rounds: number): void {
@@ -751,8 +727,8 @@ export class Panel {
       return;
     }
     const rounds = s.tradeRate / pairs;
-    if (rounds > SPEED.min + 1e-9) {
-      this.pace = Math.max(SPEED.min, rounds / 2);
+    if (rounds > MIN_ROUNDS + 1e-9) {
+      this.pace = Math.max(MIN_ROUNDS, rounds / 2);
       this.setPace(this.pace);
     } else s.run(`speed ${Math.max(SLOWEST, s.speed / 2)}`);
   }
@@ -843,7 +819,7 @@ export class Panel {
   private slider(spec: Slider): HTMLElement {
     const label = document.createElement('label');
     label.className = 'slider';
-    // the program's own, by name (the view's speed and squares have none)
+    // the program's own, by name (the view's squares slider has none)
     label.dataset.slider = spec.name;
     const name = document.createElement('span');
     // the stage's own sliders by their words; any other program's by its name
@@ -908,10 +884,6 @@ export class Panel {
 
 /** The stage's own sliders' words (a program's slider is named in lower case). */
 const SLIDER_WORDS: Readonly<Record<string, string>> = { stake: WORDS.panel.stake, tax: WORDS.panel.tax };
-
-/** A value between lo and hi as a place on a log track, 0 … 1; and back. */
-const toUnit = (v: number, lo: number, hi: number) => Math.min(1, Math.max(0, Math.log(v / lo) / Math.log(hi / lo)));
-const fromUnit = (u: number, lo: number, hi: number) => lo * (hi / lo) ** u;
 
 /** A slider's step: 1, 2 or 5 times a power of ten, so round values sit on it. */
 function roundStep(raw: number): number {

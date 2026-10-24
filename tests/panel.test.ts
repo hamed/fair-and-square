@@ -48,10 +48,11 @@ describe('the Play panel', () => {
       expect(button(text).title, text).toMatch(new RegExp(`^${text}`));
     }
     expect(button('Be a square').querySelector('svg')).toBeNull();
-    for (const name of ['speed', 'squares', 'stake', 'tax']) expect(knob(name), name).toBeTruthy();
+    for (const name of ['squares', 'stake', 'tax']) expect(knob(name), name).toBeTruthy();
+    expect(root.querySelector('[data-knob="Speed"]')).toBeNull();
     expect(root.querySelector('.number span')?.textContent).toBe('Gini');
     // made of squares (owner, 2026-10-21): one of controls, Be a square on Play's line, a square for each chart
-    expect([...root.querySelectorAll<HTMLElement>('.tile')].filter((t) => !t.hidden).map((t) => t.className)).toEqual(['tile controls', 'tile plot gini', 'tile plot turnover', 'tile plot lorenz', 'tile plot ccdf']);
+    expect([...root.querySelectorAll<HTMLElement>('.tile')].filter((t) => !t.hidden).map((t) => t.className)).toEqual(['tile controls']);
     expect(button('Be a square').parentElement).toBe(button('Share').parentElement);
     // arrange: pressed, pressed again, back to standing
     button('In the box').click();
@@ -114,19 +115,53 @@ describe('the Play panel', () => {
     expect(root.querySelector('[aria-live]')?.textContent).toMatch(/^You are square number \d of 4, with \S+ of all the money\.$/);
   });
 
-  it('speed is rounds a second: slow ones show every trade, fast ones happen at once; squares makes a new yard', () => {
+  it('Pause preserves the chosen formation and the economy', () => {
     const s = new Session({ n: 16 });
-    const { knob } = mount(s);
-    const speed = knob('speed');
-    // 1 … 1000 on a log track: 0.5 is about 31.6 rounds a second
-    speed.value = '0.5';
-    speed.dispatchEvent(new Event('input'));
-    expect(s.rate! / 8).toBeCloseTo(Math.sqrt(1000), 6);
-    expect(s.transit.trade).toBe('off');
-    speed.value = '0';
-    speed.dispatchEvent(new Event('input'));
+    const { root, panel, button } = mount(s);
+    button('In the box').click();
+    s.run('play');
+    const hash = s.game.run.hash();
+    root.querySelector<HTMLButtonElement>('[data-control=play]')!.click();
+    expect(s.playing).toBe(false);
+    expect(s.recipe.pose).toBe('fold');
+    panel.update(3000);
+    expect(s.game.run.hash()).toBe(hash);
+  });
+
+  it('chart buttons photograph the completed formation before revealing only its chart', () => {
+    const s = new Session({ n: 16 });
+    const { root, panel, button } = mount(s);
+    const hidden = (kind: string) => root.querySelector<HTMLElement>(`.tile.${kind}`)!.hidden;
+    expect(['gini', 'lorenz', 'ccdf', 'turnover'].every(hidden)).toBe(true);
+    s.run('play');
+    button('CCDF').click();
+    panel.update(1500);
+    expect(s.playing).toBe(false);
+    expect(hidden('ccdf')).toBe(true);
+    expect(s.handoff).toBeNull();
+    s.hurry();
+    panel.update(2000);
+    expect(s.handoff?.kind).toBe('ccdf');
+    expect(hidden('ccdf')).toBe(false);
+    expect(['gini', 'lorenz', 'turnover'].every(hidden)).toBe(true);
+    button('Lorenz').click();
+    s.hurry();
+    panel.update(3000);
+    expect([...s.charted]).toEqual(['ccdf', 'lorenz', 'gini']);
+    expect(hidden('lorenz')).toBe(false);
+    expect(hidden('gini')).toBe(false);
+    expect(hidden('turnover')).toBe(true);
+    button('Effective number').click();
+    s.hurry();
+    expect(s.handoff?.kind).toBe('neff');
+  });
+
+  it('squares makes a new yard and keeps the pace selected with the buttons', () => {
+    const s = new Session({ n: 16 });
+    const { knob, button } = mount(s);
+    s.rate = 16;
+    button('Slower').click();
     expect(s.rate).toBe(8);
-    expect(s.transit.trade).toBe('piece');
     // owner, 2026-10-22: squares in whole squares only, 2 × 2 … 31 × 31
     const squares = knob('squares');
     expect([squares.min, squares.max, squares.step]).toEqual(['2', '31', '1']);
@@ -147,7 +182,7 @@ describe('the Play panel', () => {
     const s = new Session({ n: 16 });
     const { root, panel } = mount(s);
     const before = s.traded;
-    s.run('fx off; round 10');
+    s.run('fx off; round 10; handoff gini');
     // a round of 16 trading in pairs at a 10% stake moves a few percent of everything
     const perRound = (s.traded - before) / 10;
     expect(perRound).toBeGreaterThan(0.005);
@@ -159,8 +194,7 @@ describe('the Play panel', () => {
     panel.update(5000);
     const strips = () => [...root.querySelectorAll('.tile.gini .chart .strip')].map((x) => x.textContent);
     expect(strips()).toEqual(['Gini', 'Effective number']);
-    expect(root.querySelector<HTMLElement>('.tile.turnover')!.hidden).toBe(false);
-    expect(root.querySelector('.tile.turnover .chart path.line')).not.toBeNull();
+    expect(root.querySelector<HTMLElement>('.tile.turnover')!.hidden).toBe(true);
     // its plot an exact square: the frame's rects stack to one s × s square
     const frames = [...root.querySelectorAll<SVGRectElement>('.tile.gini .chart .frame')];
     const w = Number(frames[0].getAttribute('width'));
@@ -176,7 +210,7 @@ describe('the Play panel', () => {
   it('owner 2026-10-22: charts as the sandbox has them: an axis click toggles log, a double-click fills the window, Escape gives it back', async () => {
     const s = new Session({ n: 16 });
     const { root, panel } = mount(s);
-    s.run('fx off; round 30');
+    s.run('fx off; round 30; handoff ccdf');
     panel.update(5000);
     const ccdf = root.querySelector<HTMLElement>('.tile.ccdf')!;
     const label = () => [...ccdf.querySelectorAll('.chart .label')].map((x) => x.textContent).join(' | ');

@@ -254,7 +254,7 @@ for (const [width, height] of [
   [1366, 768],
   [1280, 720],
 ]) {
-  test(`the panel's squares run from the yard's top to its bottom, the controls whole in theirs (${width}×${height})`, async ({ baseURL }) => {
+  test(`the visible panel squares fit beside the yard, the controls whole in theirs (${width}×${height})`, async ({ baseURL }) => {
     const browser = await chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
     const page = await browser.newPage({ viewport: { width, height } });
     await page.goto(`${baseURL}/?opening=0`);
@@ -272,7 +272,7 @@ for (const [width, height] of [
       };
     });
     expect(Math.abs(m.top[0] - m.top[1])).toBeLessThanOrEqual(1);
-    expect(Math.abs(m.bottom[0] - m.bottom[1])).toBeLessThanOrEqual(1);
+    expect(m.bottom[1]).toBeLessThanOrEqual(m.bottom[0] + 1);
     expect(m.overflow).toBeLessThanOrEqual(0);
     await browser.close();
   });
@@ -282,7 +282,7 @@ for (const [width, height] of [
 test('charts: hover shows an insight, an axis click toggles log, a double-click fills the window and Escape gives it back', async ({ page }) => {
   await page.goto('/?opening=0');
   await page.waitForFunction(() => (window as any).fns);
-  await page.evaluate(() => (window as any).fns.run('fx off; round 40'));
+  await page.evaluate(() => (window as any).fns.run('fx off; round 40; handoff lorenz; wait 2; handoff ccdf'));
   await page.waitForTimeout(600);
   const lorenz = page.locator('#panel .tile.lorenz .chart');
   const box = (await lorenz.boundingBox())!;
