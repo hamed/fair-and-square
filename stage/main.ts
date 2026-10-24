@@ -22,7 +22,7 @@ import { LockupFace } from './view/lockup.ts';
 import { WORDS } from './words.en.ts';
 import { awaitFonts } from './view/fonts.ts';
 import { keyAction, type KeyTarget, type OpeningState } from './view/keys.ts';
-import { BUTTONS, Opening, castOf, drawHeader, headerHeight, measureType, type Box } from './view/opening.ts';
+import { BUTTONS, Opening, castOf, drawHeader, headerAt, headerHeight, measureType, type Box } from './view/opening.ts';
 import { Panel } from './view/panel.ts';
 import { StageView } from './view/render.ts';
 import { RulesDrawer } from './view/rules.ts';
@@ -144,6 +144,16 @@ awaitFonts(fontsReady(), 4000, {
     const type = measureType();
     view.ornament = {
       draw(ctx, frame) {
+        const header = headerAt(type, frame);
+        ctx.save();
+        ctx.font = `400 ${header.name.em}px Gelasio`;
+        const metrics = ctx.measureText('Hamed Seyed-Allaei');
+        const descent = metrics.fontBoundingBoxDescent + (header.name.em - metrics.fontBoundingBoxAscent - metrics.fontBoundingBoxDescent) / 2;
+        ctx.restore();
+        const modelSize = `${header.name.em}px`;
+        const modelGap = `${frame.top - 3 - header.name.y - descent}px`;
+        if (app.style.getPropertyValue('--model-name-size') !== modelSize) app.style.setProperty('--model-name-size', modelSize);
+        if (app.style.getPropertyValue('--model-name-gap') !== modelGap) app.style.setProperty('--model-name-gap', modelGap);
         const line = drawHeader(ctx, type, frame, session.playing, tab(), session.glows, lockupFace);
         titled = line.title;
         named = line.name;
@@ -286,6 +296,7 @@ function enterStory(): void {
   storyRoot.hidden = false;
   drawer.close();
   runner = new StoryRunner(host, { yards: yardsWidget });
+  strip.reset();
   // the panel lends the story its place: its way about where the run controls are, its own controls last
   panelView.story(strip.lead, strip.controls);
   runner.start();
@@ -310,6 +321,8 @@ storyTab.addEventListener('click', () => enterStory());
 
 const app = document.querySelector<HTMLElement>('.app')!;
 const panelView = new Panel($('panel'), () => session);
+panelView.story(strip.lead, null);
+panelView.story(null, null);
 // a square's card says how it feels, as its face shows it
 panelView.mood = (i) => view.mood(i);
 const drawer = new RulesDrawer($('rules'), () => session, () => app.classList.toggle('drawing', drawer.isOpen));
@@ -338,8 +351,6 @@ document.addEventListener('change', (event) => {
   if (event.target instanceof HTMLInputElement && event.target.matches('#panel input[type="range"]')) engage('slider');
 });
 $('rules').querySelector('.close')!.addEventListener('click', () => drawer.close());
-const drawerPlay = $('rules').querySelector<HTMLButtonElement>('.play')!;
-drawerPlay.addEventListener('click', () => runLine(session.playing ? 'pause' : 'play'));
 /** The yard's floor, page px: where the four yards go, each a scaled copy of it. */
 const yardsWidget = new YardsWidget(() => {
   const c = canvas.getBoundingClientRect();
@@ -712,8 +723,6 @@ function frame(now: number): void {
   panelView.fit(view.floor.bottom + 3 - (view.yardTop - 3));
   panelView.update(now);
   drawer.update();
-  const playing = session.playing ? '❚❚ Pause' : '▶ Play';
-  if (drawerPlay.textContent !== playing) drawerPlay.textContent = playing;
   place(byline, named);
   place(lockup, titled);
   placeCredit();

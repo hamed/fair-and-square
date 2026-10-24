@@ -123,6 +123,11 @@ export class Panel {
   private levelButton: HTMLButtonElement | null = null;
   /** Be a square, and the yard to take away (share, embed): a row of their own, so each row fits its square. */
   private readonly people: HTMLElement;
+  private readonly chartButtons: HTMLElement;
+  private readonly transport: HTMLElement;
+  private readonly sharing: HTMLElement;
+  private readonly modelName: HTMLElement;
+  private navigationRow: HTMLElement | null = null;
   /** What to show (null: everything), and what was applied last. */
   showing: Showing | null = null;
   private applied = '';
@@ -133,6 +138,7 @@ export class Panel {
   private extra: HTMLElement | null = null;
   private arrange: HTMLButtonElement[] = [];
   private squares: { input: HTMLInputElement; value: HTMLOutputElement; dragging: boolean } | null = null;
+  private population: HTMLElement | null = null;
   /** The rounds a second asked for (null: the session's own pace), kept through a change of N. */
   private pace: number | null = null;
   /** The square of controls, and in it: the run, the view's, the sliders, the numbers. */
@@ -140,6 +146,7 @@ export class Panel {
   private readonly bar: HTMLElement;
   private readonly view: HTMLElement;
   private readonly knobs: HTMLElement;
+  private readonly modelActions: HTMLElement;
   private readonly numbers: HTMLElement;
   /** What a control did that only the yard shows (who you are), said to screen readers. */
   private readonly said: HTMLElement;
@@ -172,7 +179,15 @@ export class Panel {
     this.bar = part('bar');
     this.view = part('bar view');
     this.people = part('bar people');
+    this.chartButtons = part('bar chart-buttons');
+    this.transport = part('transport');
+    this.transport.setAttribute('role', 'group');
+    this.transport.setAttribute('aria-label', 'Simulation controls');
+    this.sharing = part('bar sharing');
+    this.modelName = document.createElement('span');
+    this.modelName.className = 'current-model';
     this.knobs = part('knobs');
+    this.modelActions = part('bar model-actions');
     this.numbers = part('numbers');
     this.note = document.createElement('p');
     this.note.className = 'note';
@@ -213,7 +228,8 @@ export class Panel {
     let tile = (width - (cols - 1) * gap) / cols;
     let rowGap = gap;
     if (typeof matchMedia === 'function' && matchMedia('(orientation: landscape) and (min-width: 720px)').matches) {
-      const aligned = this.span > 0 ? alignedTo(this.span, width, count) : null;
+      const availableHeight = this.span - this.transport.offsetHeight - gap;
+      const aligned = availableHeight > 0 ? alignedTo(availableHeight, width, count) : null;
       if (aligned) ({ cols, tile, rowGap } = aligned);
       else {
         const height = innerHeight - Math.max(0, this.root.getBoundingClientRect().top) - 12;
@@ -238,6 +254,11 @@ export class Panel {
   update(now: number): void {
     const game = this.session().game;
     if (game.program !== this.program) this.build(game.program);
+    const context = this.analyticsContext();
+    this.transport.dataset.mode = context;
+    this.root.dataset.mode = context;
+    const caption = this.modelName.dataset.model ?? '';
+    if (this.modelName.textContent !== caption) this.modelName.textContent = caption;
     if (this.play) {
       const playing = this.session().playing;
       if (this.play.dataset.state !== String(playing)) {
@@ -316,7 +337,11 @@ export class Panel {
     const spec = this.session().game.panel;
     this.bar.replaceChildren();
     this.people.replaceChildren();
+    this.chartButtons.replaceChildren();
+    this.sharing.replaceChildren();
+    this.modelName.dataset.model = String(simulationSummary(this.session()).sim_model).replace('stage', 'Yard sale').replaceAll('-', ' ').replace(/^./, (c) => c.toUpperCase());
     this.knobs.replaceChildren();
+    this.modelActions.replaceChildren();
     this.numbers.replaceChildren();
     this.view.replaceChildren();
     this.arrange = [];
@@ -354,23 +379,23 @@ export class Panel {
         const arrange = a.id === 'ccdf' ? a.run : `fx chart off; ${a.run}`;
         const photo = a.photo ? `; until done; handoff ${a.photo}${a.photo === 'lorenz' ? '; wait 2; handoff gini' : ''}` : '';
         s.run(this.arranged() === a.id ? 'fx chart off; guide off; room' : `${a.photo ? 'pause; finish; ' : ''}${arrange}${photo}`);
-      }, 'arrange', this.view, a.id);
+      }, 'arrange', ['ccdf', 'neff', 'lorenz'].includes(a.id) ? this.chartButtons : this.view, a.id);
       wear(b, a.icon, a.word, a.tip);
       b.setAttribute('aria-pressed', 'false');
       this.arrange.push(b);
     }
-    const share = this.control(WORDS.panel.share, WORDS.panel.shareTip, () => this.send(share, -1), 'share', this.people, 'share');
-    wear(share, 'share', WORDS.panel.share, WORDS.panel.shareTip);
-    const embed = this.control(WORDS.panel.embed, WORDS.panel.embedTip, () => this.embed(embed), 'share', this.people, 'embed');
+    const embed = this.control(WORDS.panel.embed, WORDS.panel.embedTip, () => this.embed(embed), 'share', this.sharing, 'embed');
     wear(embed, 'embed', WORDS.panel.embed, WORDS.panel.embedTip);
+    const share = this.control(WORDS.panel.share, WORDS.panel.shareTip, () => this.send(share, -1), 'share', this.sharing, 'share');
+    wear(share, 'share', WORDS.panel.share, WORDS.panel.shareTip);
     // how much is shown moving (owner, 2026-10-22): coins, pieces, or nothing, one button that steps through them
     // (its icon the one chosen), kept through a new yard
-    this.levelButton = this.control(WORDS.panel.level, '', () => this.setLevel(LEVELS[(LEVELS.indexOf(this.level) + 1) % LEVELS.length]), 'level', this.people, 'level');
+    this.levelButton = this.control(WORDS.panel.level, '', () => this.setLevel(LEVELS[(LEVELS.indexOf(this.level) + 1) % LEVELS.length]), 'level', this.bar, 'level');
     this.showLevel();
-    this.knobs.append(this.squaresSlider());
+    this.knobs.append(this.populationButtons(), this.squaresSlider());
     for (const sl of spec.sliders) this.knobs.append(this.slider(sl));
     this.knobs.hidden = !spec.sliders.length;
-    for (const name of spec.buttons) this.control(name, `the program's “${name}” button`, () => this.session().press(name), 'press', this.bar, `press:${name}`);
+    for (const name of spec.buttons) this.control(name, `the program's “${name}” button`, () => this.session().press(name), 'press', this.modelActions, `press:${name}`);
     // the numbers, a line under the sliders: name and value
     for (const watch of spec.watches) {
       const cell = document.createElement('span');
@@ -562,6 +587,7 @@ export class Panel {
   story(lead: HTMLElement | null, extra: HTMLElement | null): void {
     if (lead === this.lead && extra === this.extra) return;
     this.lead = lead;
+    if (lead) this.navigationRow = lead;
     this.extra = extra;
     this.rows();
     this.applied = '\u0000';
@@ -569,8 +595,9 @@ export class Panel {
 
   /** The squares: the controls (the Story's rows in it when it lends them), a square's card, then the charts. */
   private rows(): void {
-    this.controls.replaceChildren(...[this.lead, this.bar, this.view, this.people, this.knobs, this.numbers, this.note, this.extra].filter((x): x is HTMLElement => !!x));
-    this.root.replaceChildren(this.controls, this.card.tile, ...this.plots.slice(0, 1).map((p) => p.tile), this.turnover.tile, ...this.plots.slice(1).map((p) => p.tile), this.said);
+    this.transport.replaceChildren(...[this.modelName, this.bar, this.view, this.chartButtons, this.people, this.sharing, this.navigationRow].filter((x): x is HTMLElement => !!x));
+    this.controls.replaceChildren(...[this.modelActions, this.knobs, this.numbers, this.note, this.extra].filter((x): x is HTMLElement => !!x));
+    this.root.replaceChildren(this.transport, this.controls, this.card.tile, ...this.plots.slice(0, 1).map((p) => p.tile), this.turnover.tile, ...this.plots.slice(1).map((p) => p.tile), this.said);
   }
 
   /**
@@ -583,7 +610,19 @@ export class Panel {
     const key = (this.focused ? 'focus ' : '') + (show ? JSON.stringify(show) : [...this.session().charted].join(','));
     if (key === this.applied) return;
     this.applied = key;
-    for (const el of this.root.querySelectorAll<HTMLElement>('[data-control]')) el.hidden = !!show && !show.controls.includes(el.dataset.control!);
+    for (const el of this.root.querySelectorAll<HTMLButtonElement>('[data-control]')) {
+      const common = this.transport.contains(el) && !el.dataset.control?.startsWith('press:');
+      el.hidden = !common && !!show && !show.controls.includes(el.dataset.control!);
+      el.disabled = common && !!show && !show.controls.includes(el.dataset.control!);
+    }
+    if (this.navigationRow) {
+      this.navigationRow.hidden = !this.lead;
+      for (const b of this.navigationRow.querySelectorAll<HTMLButtonElement>('button')) {
+        if (!this.lead) b.disabled = true;
+        else if (b.classList.contains('act')) b.disabled = false;
+      }
+      this.navigationRow.classList.toggle('inactive', !this.lead);
+    }
     for (const el of this.root.querySelectorAll<HTMLElement>('[data-knob]')) el.hidden = !!show;
     for (const s of this.sliders) {
       const label = s.input.closest('label')!;
@@ -600,7 +639,7 @@ export class Panel {
         s.input.parentElement!.append(notch);
       }
     }
-    for (const row of [this.bar, this.view, this.people, this.knobs]) row.hidden = ![...row.children].some((c) => !(c as HTMLElement).hidden);
+    for (const row of [this.bar, this.view, this.chartButtons, this.people, this.knobs, this.modelActions]) row.hidden = ![...row.children].some((c) => !(c as HTMLElement).hidden);
     const shows = (kind: string) => show ? show.charts === true || (Array.isArray(show.charts) && show.charts.includes(kind)) : this.session().charted.has(kind);
     for (const r of this.readouts) r.cell.hidden = !!show && !shows(r.kind);
     this.numbers.hidden = this.readouts.every((r) => r.cell.hidden);
@@ -608,8 +647,8 @@ export class Panel {
     // Play's own (Learn does not teach it), and not while a yard is only looked at
     this.turnover.tile.hidden = !!show || !this.session().charted.has('turnover');
     this.note.hidden = !this.focused;
-    this.controls.hidden = !this.lead && [this.bar, this.view, this.people, this.knobs, this.numbers, this.note].every((r) => r.hidden);
-    this.root.hidden = this.controls.hidden && this.plots.every((p) => p.tile.hidden);
+    this.controls.hidden = [this.modelActions, this.knobs, this.numbers, this.note].every((r) => r.hidden) && (!this.extra || this.extra.hidden);
+    this.root.hidden = false;
     // squares shown or hidden: the grid fits them again
     this.layout();
   }
@@ -697,6 +736,13 @@ export class Panel {
     const s = this.session();
     const now = this.arranged();
     this.arrange.forEach((b, k) => b.setAttribute('aria-pressed', String(ARRANGE[k].id === now)));
+    if (this.population) {
+      const current = this.population.querySelector<HTMLButtonElement>('[data-current]')!;
+      current.hidden = [...this.population.querySelectorAll<HTMLButtonElement>('button:not([data-current])')].some((b) => Number(b.value) === s.game.n);
+      current.value = String(s.game.n);
+      current.textContent = String(s.game.n);
+      for (const b of this.population.querySelectorAll<HTMLButtonElement>('button')) b.setAttribute('aria-pressed', String(Number(b.value) === s.game.n));
+    }
     if (this.squares && !this.squares.dragging) {
       this.squares.input.value = String(Math.min(SIDE.max, Math.max(SIDE.min, Math.round(Math.sqrt(s.game.n)))));
       this.squares.input.setAttribute('aria-valuetext', squaresSaid(s.game.n));
@@ -772,6 +818,33 @@ export class Panel {
     const next = LEVELS[(LEVELS.indexOf(this.level) + 1) % LEVELS.length];
     const words = WORDS.panel.levels;
     wear(b, LEVEL_ICON[this.level], `${WORDS.panel.level}: ${words[this.level]}`, `${WORDS.panel.levelTips[this.level]}\n${WORDS.panel.levelNext.replace('{next}', words[next])}`);
+  }
+
+  private populationButtons(): HTMLElement {
+    const group = document.createElement('div');
+    group.className = 'population';
+    group.dataset.knob = 'population';
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', WORDS.panel.squares);
+    const label = document.createElement('span');
+    label.textContent = WORDS.panel.squares;
+    group.append(label);
+    for (const n of [4, 9, 16, 36, 64, 256, 1024, null]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.value = String(n ?? this.session().game.n);
+      button.textContent = button.value;
+      if (n === null) button.dataset.current = '';
+      button.addEventListener('click', () => {
+        const count = Number(button.value);
+        if (count !== this.session().game.n) this.session().run(`n ${count}`);
+        if (this.pace !== null) this.setPace(this.pace);
+        this.views();
+      });
+      group.append(button);
+    }
+    this.population = group;
+    return group;
   }
 
   /** How many squares, a whole square of them each step (4, 9, 16, … 961); a new yard when let go (everyone equal). */

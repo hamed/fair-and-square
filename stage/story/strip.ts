@@ -85,8 +85,9 @@ export class Strip {
     });
     this.show = button('showme', () => this.runner()?.showMe());
     this.show.textContent = STORY.ui.showMe;
-    this.show.hidden = true;
+    this.show.disabled = true;
     this.next = button('next', () => this.runner()?.next());
+    wear(this.next, 'next', STORY.ui.next);
     nav.append(this.back, list, this.show, this.next);
     this.say.append(this.words, this.guess);
     this.lead.append(nav);
@@ -94,6 +95,11 @@ export class Strip {
   }
 
   /** What the panel shows by now (the runner's). */
+  reset(): void {
+    this.seen = -1;
+    this.built = -1;
+  }
+
   get showing(): Showing | null {
     return this.runner()?.showing ?? null;
   }
@@ -286,7 +292,8 @@ export class Strip {
   private state(r: StoryRunner): void {
     const chosen = r.chosen.get(r.at);
     for (const c of this.choices) c.setAttribute('aria-pressed', String(c.dataset.key === chosen));
-    this.show.hidden = !r.offer || r.done || r.beat?.wait?.kind === 'pick';
+    this.show.hidden = false;
+    this.show.disabled = !r.offer || r.done || r.beat?.wait?.kind === 'pick';
     const hint = r.offer && !r.done;
     this.controls.classList.toggle('hint', hint);
     this.guess.classList.toggle('hint', hint);
@@ -297,6 +304,7 @@ export class Strip {
       wear(this.next, face, r.last ? STORY.ui.play : STORY.ui.next);
     }
     this.next.setAttribute('aria-disabled', String(!r.done));
+    this.next.disabled = !r.done;
     const act = r.act;
     this.acts.forEach((b, a) => {
       // the act's number; in the current one, the beat's too (3·4): a reference to point at a moment

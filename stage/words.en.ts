@@ -108,7 +108,7 @@ export const WORDS = {
     neffTip: 'copies of the pile\npress again: stand',
     lorenz: 'Lorenz',
     lorenzTip: 'stairs and the Gini\npress again: stand',
-    be: 'Be a square',
+    be: 'Be born',
     beTip: 'you, at random',
     /** Said to a screen reader when Be a square has picked you (the yard shows it on your card). */
     youSay: 'You are square number {rank} of {n}, with {share} of all the money.',

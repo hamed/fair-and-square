@@ -134,7 +134,7 @@ body {
 .game-info-copy {
   position: absolute;
   inset-inline-end: 0;
-  inset-block-end: calc(100% + 6px);
+  inset-block-end: calc(100% + var(--model-name-gap, 2px));
   inline-size: min(32rem, calc(100vw - 20px));
   max-block-size: min(28rem, 60vh);
   max-block-size: min(28rem, 60dvh);
@@ -212,7 +212,6 @@ body {
   scrollbar-gutter: stable;
 }
 
-.app.drawing .side,
 .embed .toggle,
 .embed .hud {
   display: none;
@@ -224,14 +223,16 @@ body {
    (panel.ts sets both from the side's size). */
 
 .readerpanel {
+  inline-size: 100%;
   --cols: 1;
   --tile: 300px;
   display: grid;
-  grid-template-columns: repeat(var(--cols), var(--tile));
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-template-rows: auto;
   grid-auto-rows: var(--tile);
   /* rows as far apart as ends them at the yard's bottom (panel.ts alignedTo) */
   gap: var(--row-gap, 10px) 10px;
-  padding: 12px;
+  padding: 38px 12px 12px;
   overflow-y: auto;
   scrollbar-gutter: stable;
   flex: 0 1 auto;
@@ -240,7 +241,42 @@ body {
   text-align: start;
 }
 
+.readerpanel .transport {
+  position: relative;
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 4px;
+  padding: 10px;
+  border: 1px solid var(--wall);
+  background: var(--floor);
+  min-inline-size: 0;
+}
+
+.readerpanel .transport > .bar { gap: 3px; align-items: center; }
+.readerpanel .transport > :is(.view, .people) { margin-inline-start: 4px; }
+.readerpanel .transport button { min-inline-size: 24px; min-block-size: 28px; padding-inline: 2px; font-size: 12px; }
+.transport .sharing { margin-inline-start: auto; }
+.transport .current-model {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-end: calc(100% + 6px);
+  color: #958c7b;
+  font: 400 var(--model-name-size, 13px)/1 var(--serif);
+  white-space: nowrap;
+}
+.transport .storyrow { flex: 1 1 100%; min-inline-size: 0; border: 0; padding: 0; order: 5; }
+.transport .storyrow.inactive { opacity: 0.5; }
+.transport button:disabled { opacity: 0.4; cursor: default; animation: none; box-shadow: none; }
+.app.drawing .readerpanel > :not(.transport) { display: none; }
+.app.drawing .readerpanel { flex: none; overflow: visible; }
+.side > .drawer { flex: 1; min-block-size: 240px; }
+.side { gap: 10px; }
+
 .readerpanel .tile {
+  inline-size: var(--tile);
+  max-inline-size: 100%;
   min-inline-size: 0;
   min-block-size: 0;
   margin: 0;
@@ -262,6 +298,14 @@ body {
 .readerpanel .tile.controls:has(.program) {
   scrollbar-gutter: stable;
 }
+
+.readerpanel .population { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
+.readerpanel .population > span { flex-basis: 100%; }
+.readerpanel:not([data-mode='play']) .population { display: none; }
+.readerpanel[data-mode='play'] .knobs > [data-knob]:not(.population) { display: none; }
+.readerpanel[data-mode='play'] .knobs { row-gap: 0; }
+.readerpanel[data-mode='play'] .population { margin-block-end: 14px; }
+.readerpanel[data-mode='play'] .numbers { margin-block-start: 14px; }
 
 /* a small square of controls (under 300 px): everything a little tighter, so it all fits in it */
 @container (max-width: 290px) {
@@ -807,8 +851,8 @@ body {
   /* the squares: their top at the yard's top, as many as the side holds */
   .readerpanel {
     align-self: flex-start;
-    padding: 0;
-    margin-block-start: max(0px, calc(var(--yard-top, 10px) - 10px));
+    padding: 26px 0 0;
+    margin-block-start: max(0px, calc(var(--yard-top, 10px) - 36px));
     max-block-size: calc(100vh - max(10px, var(--yard-top, 10px)) - 10px);
     flex: 0 0 auto;
   }

@@ -263,7 +263,7 @@ for (const [width, height] of [
     const m = await page.evaluate(() => {
       const c = document.querySelector('#stage')!.getBoundingClientRect();
       const f = (window as any).fns.floor();
-      const tiles = [...document.querySelectorAll<HTMLElement>('#panel .tile')].filter((t) => !t.hidden).map((t) => t.getBoundingClientRect());
+      const tiles = [...document.querySelectorAll<HTMLElement>('#panel .tile, #panel .transport')].filter((t) => !t.hidden).map((t) => t.getBoundingClientRect());
       const controls = document.querySelector<HTMLElement>('#panel .tile.controls')!;
       return {
         top: [c.top + f.top - 3, Math.min(...tiles.map((r) => r.top))],

@@ -28,6 +28,20 @@ function mount(s: Session) {
 }
 
 describe('the Play panel', () => {
+  it('population buttons select one count and preserve loaded non-preset counts', () => {
+    const s = new Session({ n: 25 });
+    const { root, panel } = mount(s);
+    const group = () => root.querySelector('.population')!;
+    const pressed = () => [...group().querySelectorAll<HTMLButtonElement>('[aria-pressed="true"]:not([hidden])')].map((b) => b.textContent);
+    expect(pressed()).toEqual(['25']);
+    for (const n of [4, 9, 16, 36, 64, 256, 1024]) {
+      group().querySelector<HTMLButtonElement>(`button[value="${n}"]:not([data-current])`)!.click();
+      panel.update(2000 + n * 1000);
+      expect(s.game.n).toBe(n);
+      expect(pressed()).toEqual([String(n)]);
+    }
+  });
+
   it('the stage plays the doc’s yard: stake 0–75% (10%), tax 0–75% (0), the Gini as a number; Gini, Lorenz and CCDF charts', () => {
     const spec = panelOf(stageProgram(100));
     expect(spec.sliders.map((x) => [x.name, x.min, x.max, x.start])).toEqual([
@@ -41,19 +55,22 @@ describe('the Play panel', () => {
   it('every control the doc lists is there, and does what it says', () => {
     const s = new Session({ n: 16 });
     const { root, panel, button, knob } = mount(s);
-    for (const text of ['Play', 'Slower', 'Fast forward', 'One round', 'Start again', 'New luck', 'Wander', 'In the box', 'Line up', 'CCDF', 'Effective number', 'Lorenz', 'Be a square', 'Share', 'Embed', 'Animation: Pieces']) expect(button(text), text).toBeTruthy();
+    for (const text of ['Play', 'Slower', 'Fast forward', 'One round', 'Start again', 'New luck', 'Wander', 'In the box', 'Line up', 'CCDF', 'Effective number', 'Lorenz', 'Be born', 'Share', 'Embed', 'Animation: Pieces']) expect(button(text), text).toBeTruthy();
     // icons where clear (owner, 2026-10-22), their word on hover and to screen readers; words where not
     for (const text of ['Play', 'Slower', 'Fast forward', 'One round', 'Start again', 'New luck', 'Wander', 'In the box', 'Line up', 'CCDF', 'Effective number', 'Lorenz', 'Share', 'Embed']) {
       expect(button(text).querySelector('svg'), text).not.toBeNull();
       expect(button(text).title, text).toMatch(new RegExp(`^${text}`));
     }
-    expect(button('Be a square').querySelector('svg')).toBeNull();
+    expect(button('Be born').querySelector('svg')).toBeNull();
     for (const name of ['squares', 'stake', 'tax']) expect(knob(name), name).toBeTruthy();
     expect(root.querySelector('[data-knob="Speed"]')).toBeNull();
     expect(root.querySelector('.number span')?.textContent).toBe('Gini');
-    // made of squares (owner, 2026-10-21): one of controls, Be a square on Play's line, a square for each chart
+    // made of squares (owner, 2026-10-21): one of controls, Be born on Play's line, a square for each chart
     expect([...root.querySelectorAll<HTMLElement>('.tile')].filter((t) => !t.hidden).map((t) => t.className)).toEqual(['tile controls']);
-    expect(button('Be a square').parentElement).toBe(button('Share').parentElement);
+    expect(button('Be born').closest('.transport')).toBe(button('Share').closest('.transport'));
+    expect(button('Be born').parentElement).not.toBe(button('Share').parentElement);
+    expect(button('Share').parentElement).toBe(button('Embed').parentElement);
+    expect(knob('stake').closest('.transport')).toBeNull();
     // arrange: pressed, pressed again, back to standing
     button('In the box').click();
     expect(s.recipe.pose).toBe('fold');
@@ -98,7 +115,7 @@ describe('the Play panel', () => {
     expect(s.game.n).toBe(16);
     expect(new Set(s.game.wealth).size).toBe(1);
     // be a square: a ring and a card
-    button('Be a square').click();
+    button('Be born').click();
     panel.update(2000);
     expect(s.you).not.toBeNull();
     expect(s.youText()).toMatch(/^#\d+ of 16 · /);
@@ -113,6 +130,23 @@ describe('the Play panel', () => {
     s.run('be');
     panel.update(2000);
     expect(root.querySelector('[aria-live]')?.textContent).toMatch(/^You are square number \d of 4, with \S+ of all the money\.$/);
+  });
+
+  it('the shared bar keeps unavailable actions visible and disabled while model controls stay below it', () => {
+    const s = new Session({ n: 16 });
+    const { root, panel } = mount(s);
+    panel.showing = { sliders: [], controls: ['share'], charts: false };
+    panel.update(2000);
+    const bar = root.querySelector('.transport')!;
+    const play = bar.querySelector<HTMLButtonElement>('[data-control=play]')!;
+    const share = bar.querySelector<HTMLButtonElement>('[data-control=share]')!;
+    expect(play.hidden).toBe(false);
+    expect(play.disabled).toBe(true);
+    expect(share.disabled).toBe(false);
+    expect(bar.querySelector('.slider, .numbers, .program')).toBeNull();
+    panel.showing = null;
+    panel.update(3000);
+    expect(play.disabled).toBe(false);
   });
 
   it('Pause preserves the chosen formation and the economy', () => {

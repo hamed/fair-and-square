@@ -192,7 +192,8 @@ for (const width of [1440, 390]) {
       r.showMe(); r.next();
     });
     await expect(page.locator('.yards[data-phase="pick"] .quarter')).toHaveCount(3);
-    await expect(page.locator('.storynav .showme')).toBeHidden();
+    await expect(page.locator('.storynav .showme')).toBeVisible();
+    await expect(page.locator('.storynav .showme')).toBeDisabled();
     expect(await page.evaluate(() => (window as any).fns.story().beat.key)).toBe('which');
     expect(await events(page, 'learn_choice')).toHaveLength(0);
     const outlines = await page.locator('.yards .quarter').evaluateAll((els) => els.map((el) => {
