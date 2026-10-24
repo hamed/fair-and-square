@@ -355,7 +355,21 @@ main.wide {
 }
 
 main.wide .col {
-  max-inline-size: 36rem;
+  max-inline-size: 40rem;
+}
+
+.about main.wide {
+  max-inline-size: 38rem;
+}
+
+.about main.wide .col,
+.about #pictures {
+  max-inline-size: none;
+}
+
+.about :is(.hello, #play > .what, .row p, #thanks) {
+  text-align: justify;
+  hyphens: auto;
 }
 
 .exhibit {
@@ -623,61 +637,93 @@ main.wide details > summary {
   line-height: 1.55;
 }
 
-/* the five of us with our drinks, and the two ways to give, each a square with its sticker */
+/* The family above three equally sized support and bookshop links. */
 .gifts {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   justify-content: center;
-  gap: 1.25rem 2rem;
-  margin-block: 1.25rem 0.5rem;
+  gap: 2rem;
+  margin-block: 2.5rem 0.5rem;
+  overflow-x: clip;
+}
+
+.gifts > [data-sq='party'] {
+  justify-self: center;
 }
 
 .give {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
+.give li {
+  display: flex;
+  flex-direction: column;
+  background: #fbf8f1;
+  border: 1px solid #d8d0bf;
+  min-inline-size: 0;
+}
+
 .give a {
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  min-inline-size: 6.5rem;
-  padding: 0.9rem 0.9rem 0.5rem;
-  background: #fbf8f1;
-  border: 1px solid #d8d0bf;
+  min-inline-size: 0;
+  padding: 0.9rem 0.6rem 0.5rem;
   text-decoration: none;
   color: var(--ink);
 }
 
-.give a:hover,
-.give a:focus-visible {
+.give li:hover,
+.give li:focus-within {
   border-color: #4d271c;
+}
+
+.gifts .disclose {
+  margin: -1.5rem 0 0;
+  font-size: 0.6rem;
+  line-height: 1.4;
+  text-align: end;
+  white-space: nowrap;
 }
 
 .give .name {
   font-weight: 600;
 }
 
-/* a clip on the left, its formula and words on the right */
+/* A clip and its vertically centred formula; the explanation spans the column below both. */
 #pictures {
+  max-inline-size: 40rem;
   margin-block: 3rem;
 }
 
 .row {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 1rem 2rem;
-  align-items: center;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1.5rem;
+  align-items: start;
   margin: 0 0 2.5rem;
 }
 
+.row figcaption {
+  display: contents;
+}
+
+.row img.tex {
+  align-self: center;
+  justify-self: center;
+}
+
 .row figcaption p {
-  margin-block: 0.75rem 0;
+  grid-column: 1 / -1;
+  margin: 0;
   font-size: 0.95rem;
 }
 
@@ -690,12 +736,6 @@ img.tex {
   display: block;
   max-inline-size: 100%;
   block-size: auto;
-}
-
-@media (max-width: 700px) {
-  .row {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 #play {

@@ -66,9 +66,9 @@ describe('the about page, as data', () => {
     expect(d.count).toContain('{n}');
   });
 
-  it('his own words, then the gift, then each clip beside the formula it draws (LaTeX\'s, on disk, said in words)', () => {
+  it('his own words, family and support, work and social links, then the three measures', () => {
     const order = [...page.querySelectorAll('main > section')].map((x) => x.id);
-    expect(order).toEqual(['hello', 'gift', 'pictures', 'play', 'elsewhere']);
+    expect(order).toEqual(['hello', 'gift', 'play', 'elsewhere', 'pictures']);
     expect(page.querySelector('.kicker')!.textContent).toBe('Physicist. I build models you can play with.');
     const rows = [...page.querySelectorAll<HTMLElement>('#pictures figure.row')];
     expect(rows).toHaveLength(3);
@@ -91,7 +91,7 @@ describe('the about page, as data', () => {
     for (const f of readdirSync(resolve(cwd(), 'public/about')).filter((x) => /\.(mp4|webm|jpg)$/.test(x))) expect(used.has(f), f).toBe(true);
   });
 
-  it('asks for nothing directly: no button, LinkedIn only among the links; the gift in his words, the family drinking, Ko-fi and PayPal as squares', () => {
+  it('asks for nothing directly: no button, LinkedIn only among the links; the gift in his words, the family drinking, Ko-fi, PayPal and the bookshop as squares', () => {
     expect(page.querySelectorAll('a.button')).toHaveLength(0);
     expect(page.querySelector('#work')).toBeNull();
     const linkedin = [...page.querySelectorAll('a[href*="linkedin.com"]')];
@@ -100,14 +100,14 @@ describe('the about page, as data', () => {
     expect(page.querySelector('#gift')!.textContent).toContain('a small gift warms my heart');
     expect(page.querySelector('#gift [data-sq="party"]')).toBeTruthy();
     const give = [...page.querySelectorAll<HTMLAnchorElement>('#gift .give a')];
-    expect(give.map((a) => a.querySelector<HTMLElement>('[data-logo]')!.dataset.logo)).toEqual(['kofi', 'paypal']);
+    expect(give.map((a) => a.querySelector<HTMLElement>('[data-logo]')?.dataset.logo ?? a.querySelector<HTMLElement>('[data-act]')?.dataset.act)).toEqual(['kofi', 'paypal', 'read']);
     for (const a of give) expect(a.getAttribute('href')).toMatch(/^https:\/\//);
     // no employers named (owner, 2026-10-22), no family game, no share pitch
     expect(page.body.textContent).not.toMatch(/Zalando|Delivery Hero/);
     expect(page.querySelector('[data-family]')).toBeNull();
     expect(page.querySelector('[data-share-link]')).toBeNull();
     // the book shop has its own square, reading
-    expect(page.querySelector('#elsewhere [data-act="read"]')).toBeTruthy();
+    expect(page.querySelector('#gift [data-act="read"]')).toBeTruthy();
   });
 
   it('wears the stage title: "fair&" with no space, then the live square, and the name in words', () => {
@@ -120,8 +120,8 @@ describe('the about page, as data', () => {
 
   it('credits with checkable links, and says when a link pays', () => {
     for (const a of page.querySelectorAll('#thanks a')) expect(a.getAttribute('href')).toMatch(/^https:\/\/(arxiv\.org|doi\.org)\//);
-    expect(page.querySelector('#elsewhere a[href^="https://a.co"]')).toBeTruthy();
-    expect(page.querySelector('#elsewhere .disclose')!.textContent).toBe('As an Amazon Associate I earn from qualifying purchases.');
+    expect(page.querySelector('#gift a[href^="https://a.co"]')).toBeTruthy();
+    expect(page.querySelector('#gift .disclose')!.textContent).toBe('Amazon Associate: I earn from qualifying purchases.');
     expect(page.querySelector('#elsewhere a[href="https://www.youtube.com/@allaei"]')).toBeTruthy();
   });
 
