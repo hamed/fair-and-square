@@ -16,6 +16,7 @@ test.beforeEach(async ({ context }) => {
 
 test('built pages keep links, assets, anchors and campaign tags inside the deployment directory', async ({ page, baseURL }) => {
   const root = new URL(baseURL!);
+  const pages = new Set(['', 'index.html', 'about.html', 'making-of.html'].map((file) => new URL(file, root).pathname));
   const local = new Set<string>();
   const missing: string[] = [];
   page.on('response', (response) => {
@@ -37,7 +38,8 @@ test('built pages keep links, assets, anchors and campaign tags inside the deplo
         continue;
       }
       expect(url.pathname, href).toMatch(/^\/fair-and-square\//);
-      if (tag === 'A') expect(url.searchParams.get('utm_content'), href).toBe('k7m2q9vd');
+      // Full-size artifact links are assets, not page visits; campaign tags stay on the three pages.
+      if (tag === 'A') expect(url.searchParams.get('utm_content'), href).toBe(pages.has(url.pathname) ? 'k7m2q9vd' : null);
       local.add(href);
     }
   }

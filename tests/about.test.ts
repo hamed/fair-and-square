@@ -138,21 +138,59 @@ describe('the about page, as data', () => {
 });
 
 describe('how it was made', () => {
-  it('every version has its picture on disk, said in words, and what stayed and what went; the last is the game, playing', () => {
+  it('keeps seven illustrated versions with the decisions behind each', () => {
     const entries = [...making.querySelectorAll('.log > li')];
-    expect(entries.length).toBe(7);
-    entries.slice(0, -1).forEach((li) => {
-      const img = li.querySelector('img')!;
-      expect(existsSync(resolve(cwd(), 'public', img.getAttribute('src')!))).toBe(true);
-      expect(img.getAttribute('alt')).toBeTruthy();
-      expect(li.querySelector('.fate .kept')).toBeTruthy();
-      expect(li.querySelectorAll('.fate li')).toHaveLength(2);
-    });
-    expect(entries[entries.length - 1].querySelector('video[data-clip]')).toBeTruthy();
-    // no count of commits up front (review 2026-10-22, dialogue 6): only the defined inventory, at the end
-    expect(making.querySelector('header')!.textContent).not.toMatch(/\d{3} commits/);
-    // who Hamed was in Blue and Red is not the page's business (owner, 2026-10-22)
-    expect(making.body.textContent).not.toMatch(/I am still/);
+    expect(entries).toHaveLength(7);
+    expect(new Set(entries.map((entry) => entry.id)).size).toBe(7);
+    for (const entry of entries) {
+      expect(entry.querySelector('h2')).toBeTruthy();
+      expect(entry.querySelector('.when')).toBeTruthy();
+      expect(entry.querySelector('figure img, figure video[data-clip]')).toBeTruthy();
+      expect(entry.querySelector('.fate .kept')).toBeTruthy();
+      expect(entry.querySelectorAll(':scope > .fate li')).toHaveLength(2);
+    }
+    expect(entries[6].querySelector('video[data-clip]')).toBeTruthy();
+  });
+
+  it('ships the story, accessible artifacts and source references in the initial HTML', () => {
+    expect(making.querySelectorAll('h1')).toHaveLength(1);
+    expect(making.title).toMatch(/Fair and Square/);
+    expect(making.querySelector('meta[name="description"]')?.getAttribute('content')?.length).toBeGreaterThan(80);
+    expect(making.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://hamed.github.io/fair-and-square/making-of.html');
+    const sitemap = readFileSync(resolve(cwd(), 'public/sitemap.xml'), 'utf8');
+    expect(sitemap).toContain('https://hamed.github.io/fair-and-square/making-of.html');
+    // The discovery, real editor and philosophy remain readable without running JavaScript.
+    expect(making.querySelector('.discovery .formula')?.getAttribute('aria-label')).toBeTruthy();
+    expect(making.querySelector('.build-artifact img')).toBeTruthy();
+    expect(making.querySelector('.born-section h3')).toBeTruthy();
+    for (const image of making.querySelectorAll('img')) {
+      expect(image.getAttribute('alt')).toBeTruthy();
+      expect(Number(image.getAttribute('width'))).toBeGreaterThan(0);
+      expect(Number(image.getAttribute('height'))).toBeGreaterThan(0);
+    }
+    for (const asset of making.querySelectorAll('img, video, source')) {
+      const path = (asset.getAttribute('src') ?? asset.getAttribute('poster'))!;
+      expect(path).toBeTruthy();
+      expect(existsSync(resolve(cwd(), path.startsWith('./stage/') ? path : `public/${path}`)), path).toBe(true);
+    }
+    const links = [...making.querySelectorAll('a[href]')].map((a) => a.getAttribute('href')!);
+    for (const reference of ['forbes.com', 'doi.org/10.1103/', 'arxiv.org/abs/cond-mat/0505588', 'doi.org/10.1037/', 'cit.li/coin/', 'jstor.org/', 'ncase.me/trust/', '1in8b.life/']) {
+      expect(links.some((link) => link.includes(reference)), reference).toBe(true);
+    }
+    for (const book of making.querySelectorAll<HTMLAnchorElement>('a[href^="https://link.amazon/"]')) expect(book.relList.contains('sponsored')).toBe(true);
+  });
+
+  it('offers genuine game interaction without loading a simulation before the reader asks', () => {
+    const demo = making.querySelector('[data-yard-demo]')!;
+    expect(demo.querySelector('img')?.getAttribute('alt')).toBeTruthy();
+    expect(demo.querySelector('iframe')).toBeNull();
+    expect(demo.querySelector('button[data-open-yard]')?.getAttribute('type')).toBe('button');
+    expect(demo.querySelector('a[href="./?opening=0"]')).toBeTruthy();
+    for (const video of making.querySelectorAll('video[data-clip]')) {
+      expect(video.hasAttribute('autoplay')).toBe(false);
+      expect(video.getAttribute('aria-label')).toBeTruthy();
+      expect(video.querySelectorAll('source')).toHaveLength(2);
+    }
   });
 });
 
