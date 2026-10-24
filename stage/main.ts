@@ -48,6 +48,7 @@ const form = $<HTMLFormElement>('prompt');
 const input = $<HTMLInputElement>('cmd');
 const toggle = $<HTMLButtonElement>('toggle');
 const byline = $<HTMLAnchorElement>('byline');
+const coverCopy = $<HTMLElement>('cover-copy');
 /** Over the drawn title: its name in words, for screen readers and on hover (the drawing is "fair &" and a square). */
 const lockup = $<HTMLElement>('lockup');
 /** Inside the yard, top right: who built it, when a shared link says. */
@@ -183,6 +184,55 @@ function place(el: HTMLElement, box: Box | null): void {
   el.style.top = `${r.top + box.y0}px`;
   el.style.width = `${box.x1 - box.x0}px`;
   el.style.height = `${box.y1 - box.y0}px`;
+}
+
+/** Keep the cover's HTML words on its drawn menu rows; below the whole logo if they would be cramped. */
+let coverLayout = '';
+function placeCover(): void {
+  const cover = opening;
+  coverCopy.hidden = !cover || cover.started || cover.done;
+  if (!cover || coverCopy.hidden || !cover.coverBounds) { coverLayout = ''; return; }
+  const first = cover.controls[0];
+  const second = cover.controls[1];
+  if (!first || !second) return;
+  const c = canvas.getBoundingClientRect();
+  const width = document.documentElement.clientWidth;
+  const height = document.documentElement.clientHeight;
+  const bounds = cover.coverBounds;
+  const geometry = [width, height, c.left, c.top, first.x0, first.x1, first.y0, first.y1, bounds.x0, bounds.x1, bounds.y1].join(',');
+  if (coverLayout === geometry) return;
+  coverLayout = geometry;
+  const row = first.y1 - first.y0;
+  const gap = Math.max(20, row * 0.35);
+  const left = c.left + first.x1 + gap;
+  const style = coverCopy.style;
+  const logoWidth = bounds.x1 - bounds.x0;
+  const available = Math.max(0, width - left - 24);
+  const stacked = height >= width || available < Math.min(240, logoWidth * 0.65);
+  let font = cover.buttonFontSize;
+  coverCopy.classList.toggle('stacked', stacked);
+  style.setProperty('--cover-row', `${row}px`);
+  style.setProperty('--cover-gap', `${second.y0 - first.y1}px`);
+  style.insetInlineStart = `${left}px`;
+  style.insetBlockStart = `${c.top + first.y0}px`;
+  style.inlineSize = `${available}px`;
+  if (stacked) {
+    const short = height < 500;
+    const top = c.top + bounds.y1 + (short ? 12 : 20);
+    const lineGap = short ? 4 : 8;
+    const space = Math.max(0, height - top - 40);
+    font = Math.min(font, Math.max(1, (space - 3 * lineGap) / (4 * 1.4)));
+    style.setProperty('--cover-gap', `${lineGap}px`);
+    style.insetInlineStart = `${c.left + bounds.x0}px`;
+    style.insetBlockStart = `${top}px`;
+    style.inlineSize = `${logoWidth}px`;
+  }
+  // Fit all four single lines at one size, as large as their width allows, capped at the menu lettering.
+  style.setProperty('--cover-font', `${font}px`);
+  if (coverCopy.scrollWidth > coverCopy.clientWidth) {
+    font = Math.max(1, font * coverCopy.clientWidth / coverCopy.scrollWidth - 0.25);
+    style.setProperty('--cover-font', `${font}px`);
+  }
 }
 // Play: beside the held logo it starts the game, while the logo unfolds it skips to the end, and on the line
 // above the yard it plays and pauses the trading. About opens the about page (owner, 2026-10-22: in a new window,
@@ -619,6 +669,7 @@ function frame(now: number): void {
       place(byline, opening.byline);
       place(lockup, null);
       menu.forEach((el, k) => place(el, opening?.controls[k] ?? null));
+      placeCover();
       if (opening.done) {
         chooseEntry(storyNext ? 'learn' : 'play');
         // its faces go on only in the stage it was made for: a command may have rebuilt it meanwhile

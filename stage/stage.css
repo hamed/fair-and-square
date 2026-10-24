@@ -64,6 +64,28 @@ body {
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* The cover's four lines: beside its menu rows, or together below the logo and byline when room is tight. */
+.cover-copy {
+  position: fixed;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: repeat(4, var(--cover-row));
+  row-gap: var(--cover-gap);
+  color: var(--ink);
+  font: 400 var(--cover-font)/1.4 var(--serif);
+}
+
+.cover-copy p {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.cover-copy.stacked {
+  grid-template-rows: none;
+}
+
 /* Static game context: one quiet control outside the fullscreen app's grid; its text opens upward. */
 .game-info {
   position: fixed;

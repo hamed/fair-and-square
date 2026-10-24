@@ -288,6 +288,12 @@ function run(ctx: CanvasRenderingContext2D, glyphs: readonly Glyph[], pen: Pen, 
   glyphs.forEach((g, k) => glyph(ctx, g, pen.x + g.x * pen.em, pen.y, pen.em, colour(k)));
 }
 
+/** The same lettering size for every menu button and for the cover-copy ceiling. */
+function buttonEm(type: Type, h: number): number {
+  const tall = type.up + type.down;
+  return Math.min((BUTTON_SHARE * h) / tall, (widthOf(h) - h) / (type.wide - tall + CUE_ROOM));
+}
+
 /**
  * Button k at `slot` (screen px), framed as the squares are (their inset
  * outline, in proportion), on the floor's off-white. As a tab (`tab` 1) it has
@@ -318,7 +324,7 @@ function drawButton(ctx: CanvasRenderingContext2D, type: Type, k: number, slot: 
   const edge = Math.max(1, (h * Math.min(0.25 * GRID.gap, 0.08 * SQ[1].side)) / SQ[1].side);
   // half the height, unless the widest word and its cue would not fit between the margins: the same size in every button
   const tall = type.up + type.down;
-  const em = Math.min((BUTTON_SHARE * h) / tall, (w - h) / (type.wide - tall + CUE_ROOM));
+  const em = buttonEm(type, h);
   const pad = (h - tall * em) / 2;
   ctx.globalAlpha = alpha;
   ctx.fillStyle = FLOOR;
@@ -600,6 +606,13 @@ export class Opening {
   byline: Box | null = null;
   /** Where each button was last drawn (null when it is not there), for the controls over them. */
   controls: (Box | null)[] = BUTTONS.map(() => null);
+  /** The held cover's full graphic, including its menu column; the HTML copy shares these edges in portrait. */
+  coverBounds: Box | null = null;
+  /** The actual menu lettering size, also the upper limit for the cover's HTML words. */
+  get buttonFontSize(): number {
+    const box = this.controls[0];
+    return box ? buttonEm(this.type, box.y1 - box.y0) : 0;
+  }
   private readonly ctx: CanvasRenderingContext2D;
   private readonly session: Session;
   /** The stage it was made for: only that one goes on with its faces. */
@@ -796,6 +809,7 @@ export class Opening {
       ctx.globalAlpha = 1;
     }
     this.words(cam, yardCam, st.header);
+    this.coverBounds = { x0: X(BOX), y0: Y(BOX + type.letters.top), x1: X(BOX + menuRight()), y1: this.byline?.y1 ?? Y(BOX + 1) };
     const bodies = Array.from({ length: N }, (_, k) => bodyAt(k, t));
     const order = [...bodies.keys()].sort((a, b) => bodies[a].lift - bodies[b].lift);
     const r0 = (SHARE / Math.sqrt(Math.PI)) * cam.scale;
