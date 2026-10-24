@@ -5,3 +5,4 @@ test-results/
 playwright-report/
 campaigns.private.*
 campaigns-private/
+/00-inbox/
