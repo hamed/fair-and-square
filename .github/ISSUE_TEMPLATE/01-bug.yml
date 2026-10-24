@@ -1,0 +1,34 @@
+name: Report a bug
+description: Tell us about something that is not working.
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour (optional)
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps (optional)
+      description: How can we make it happen again?
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and device (optional)
+      placeholder: e.g. Safari on iPhone, Chrome on Windows
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot (optional)
+      description: Paste or drag an image into this field.
+  - type: textarea
+    id: settings
+    attributes:
+      label: Game settings (optional)
+      description: Share a game link, or describe the mode, model and settings.

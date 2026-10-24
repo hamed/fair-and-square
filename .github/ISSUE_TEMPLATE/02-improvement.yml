@@ -1,0 +1,20 @@
+name: Suggest an improvement
+description: Propose a change to Fair and Square.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Proposed change
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation (optional)
+      description: Why would this change help?
+  - type: textarea
+    id: example
+    attributes:
+      label: Example (optional)
+      description: A concrete example, sketch or screenshot.

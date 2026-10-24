@@ -1,0 +1,24 @@
+name: Feedback or correction
+description: Discuss something confusing, incorrect or worth exploring.
+labels: [feedback]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What is confusing, incorrect or worth discussing?
+    validations:
+      required: true
+  - type: textarea
+    id: location
+    attributes:
+      label: Location (optional)
+      description: Which page, chapter, model or part of the game?
+  - type: textarea
+    id: correction
+    attributes:
+      label: Suggested correction (optional)
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference (optional)
+      description: A source or link that helps explain your feedback.
