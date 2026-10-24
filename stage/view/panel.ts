@@ -18,7 +18,7 @@ import { NEFF } from '../core/game.ts';
 import type { Recipe } from '../core/recipe.ts';
 import { WORDS } from '../words.en.ts';
 import { FILLS, STROKES } from '../essay/agentStyle.ts';
-import { Chart, drawCcdf, drawHistogram, drawLorenz, drawSeries, drawTime, drawTurnover, zoomable } from './charts.ts';
+import { Chart, FRAME, chartHeading, drawCcdf, drawHistogram, drawLorenz, drawSeries, drawTime, drawTurnover, zoomable } from './charts.ts';
 import { colourOf } from './render.ts';
 import { wear, type IconName } from './icons.ts';
 import { sharedUrl, track, type AnalyticsData } from '../analytics.ts';
@@ -40,11 +40,12 @@ type Level = (typeof LEVELS)[number];
 const LEVEL_ICON: Readonly<Record<Level, IconName>> = { coins: 'coins', pieces: 'pieces', off: 'still' };
 /** The squares slider's ends, as the side of a square of squares (owner, 2026-10-22: only whole squares, 4 … 961). */
 const SIDE = { min: 2, max: 31 };
-/** The panel's squares: the gap between them, the smallest a square of controls is usable at, the biggest (px). */
-const TILE = { gap: 10, min: 220, max: 380 };
-type PlotKind = 'gini' | 'lorenz' | 'ccdf' | 'histogram';
-/** Room kept for a scrollbar beside the squares, px (more than any classic scrollbar's width). */
-const SCROLLBAR = 18;
+/** Preferred gutter and portrait tile width, in CSS pixels; landscape fits the yard's bounds. */
+const TILE = { gap: 32, min: 220 };
+/** Space for the bottom axis label and the next chart's title, at the SVG's scale. */
+const LABEL_GUTTER = 0.18;
+type PlotKind = 'gini' | 'neff' | 'lorenz' | 'ccdf' | 'histogram';
+const isTimePlot = (kind: PlotKind): kind is 'gini' | 'neff' => kind === 'gini' || kind === 'neff';
 /**
  * The arrangements: a word each, what it runs (from the room, any guide put away), and how to tell it is the one
  * standing. Line up stands them by side = money, so the row is the box's width, not the yard's many times over
@@ -107,6 +108,7 @@ export class Panel {
   private sliders: SliderView[] = [];
   private readouts: { watch: Watch; out: HTMLElement; cell: HTMLElement; kind: string }[] = [];
   private plots: { kind: PlotKind; tile: HTMLElement; chart: Chart }[] = [];
+  private timeStacks: HTMLElement[] = [];
   private rounds: number[] = [];
   private ginis: number[] = [];
   private every = 1;
@@ -209,45 +211,50 @@ export class Panel {
   }
 
   /**
-   * How the squares tile the side: in landscape the m × n (up to 4 across) that gives the biggest squares within
-   * the side's width and height (never past TILE.max; if even the best is under TILE.min, as many across as fit at
-   * TILE.min, scrolling); in portrait, as many across as fit at TILE.min, the full width shared.
+   * Keep readable square tiles with fixed gutters; time plots share a square-height stack.
    */
   private layout(): void {
     const side = this.root.parentElement;
     if (!side) return;
-    // every chart counted, shown or not (the grid the same in Learn as in Play), Play's turnover too
-    const count = 2 + this.plots.length + (this.card.tile.hidden ? 0 : 1);
-    // the width as laid out, a scrollbar's room always kept aside (stage.css: stable gutters): a scrollbar coming and
-    // going must not change the squares (owner, 2026-10-21: they shook)
-    const width = side.offsetWidth - SCROLLBAR - 2 * parseFloat(getComputedStyle(this.root).paddingInlineStart || '0') - 2;
+    // Reserve the primary model panels, but not an empty turnover/card slot.
+    // The standard model keeps its Controls / Time / Lorenz / CCDF two-by-two grid.
+    const primaryTimes = this.timeStacks.filter((stack) => stack.querySelector('.gini, .neff'));
+    const extraTimes = this.timeStacks.filter((stack) => !primaryTimes.includes(stack) && !stack.hidden);
+    const slots = [this.controls, ...primaryTimes, ...this.plots.filter((p) => !isTimePlot(p.kind)).map((p) => p.tile), ...extraTimes, ...(!this.card.tile.hidden ? [this.card.tile] : [])];
+    const count = slots.length;
+    const programRows = this.controls.querySelector('.program') ? 3 : 0;
+    const style = getComputedStyle(this.root);
+    const width = this.root.clientWidth - parseFloat(style.paddingInlineStart || '0') - parseFloat(style.paddingInlineEnd || '0');
     if (!(width > 0)) return;
     const gap = TILE.gap;
-    const across = (at: number) => Math.max(1, Math.min(4, count, Math.floor((width + gap) / (at + gap))));
-    let cols = across(TILE.min);
+    let cols = Math.max(1, Math.min(2, count, Math.floor((width + gap) / (TILE.min + gap))));
     let tile = (width - (cols - 1) * gap) / cols;
-    let rowGap = gap;
-    if (typeof matchMedia === 'function' && matchMedia('(orientation: landscape) and (min-width: 720px)').matches) {
-      const availableHeight = this.span - this.transport.offsetHeight - gap;
-      const aligned = availableHeight > 0 ? alignedTo(availableHeight, width, count) : null;
-      if (aligned) ({ cols, tile, rowGap } = aligned);
-      else {
-        const height = innerHeight - Math.max(0, this.root.getBoundingClientRect().top) - 12;
-        let best = { cols: 1, tile: 0 };
-        for (let c = 1; c <= Math.min(4, count); c++) {
-          const rows = Math.ceil(count / c);
-          const t = Math.min((width - (c - 1) * gap) / c, (height - (rows - 1) * gap) / rows, TILE.max);
-          if (t > best.tile + 0.5) best = { cols: c, tile: t };
-        }
-        if (best.tile >= TILE.min) ({ cols, tile } = best);
-        else tile = Math.min(tile, TILE.max);
-      }
+    const landscape = this.span > 0 && typeof matchMedia === 'function' && matchMedia('(orientation: landscape) and (min-width: 720px)').matches;
+    if (landscape && !this.root.closest('.drawing')) {
+      // Include every inter-row gap, the toolbar, and the final axis labels in the height budget.
+      const available = Math.max(1, this.span - this.transport.offsetHeight - 32);
+      cols = Math.min(2, count);
+      const rows = programRows + Math.ceil((count - (programRows ? 1 : 0)) / cols);
+      tile = Math.min((width - (cols - 1) * gap) / cols, available / rows - gap, available / (rows * (1 + LABEL_GUTTER)));
     }
-    const rg = `${rowGap.toFixed(2)}px`;
-    if (this.root.style.getPropertyValue('--row-gap') !== rg) this.root.style.setProperty('--row-gap', rg);
-    const px = `${Math.floor(tile)}px`;
-    if (this.root.style.getPropertyValue('--tile') !== px) this.root.style.setProperty('--tile', px);
-    if (this.root.style.getPropertyValue('--cols') !== String(cols)) this.root.style.setProperty('--cols', String(cols));
+    const rowGap = Math.max(gap, tile * LABEL_GUTTER);
+    this.root.style.setProperty('--row-gap', `${rowGap}px`);
+    this.root.style.setProperty('--tile', `${tile}px`);
+    this.root.style.setProperty('--cols', String(cols));
+    this.root.style.setProperty('--panel-width', `${width}px`);
+    slots.forEach((slot, index) => {
+      if (programRows && index === 0) {
+        slot.style.gridColumn = '1 / -1';
+        slot.style.gridRow = `2 / span ${programRows}`;
+      } else {
+        const cell = index - (programRows ? 1 : 0);
+        slot.style.gridColumn = String(cell % cols + 1);
+        slot.style.gridRow = String(Math.floor(cell / cols) + 2 + programRows);
+      }
+    });
+    const timeHeight = FRAME.W * (tile - rowGap) / (2 * tile);
+    for (const p of this.plots) if (isTimePlot(p.kind)) p.chart.resize(timeHeight);
+    this.turnover.chart.resize(timeHeight);
   }
 
   /** Each frame: rebuilt if the program changed, refreshed a few times a second. */
@@ -323,7 +330,7 @@ export class Panel {
       for (const p of this.plots) {
         if (p.tile.hidden) continue;
         // time: the Gini, and the effective number next to it
-        if (p.kind === 'gini') drawTime(p.chart, { rounds: this.rounds, gini: this.ginis, neff: this.neffs, n: s.game.n });
+        if (isTimePlot(p.kind)) drawTime(p.chart, { rounds: this.rounds, gini: this.ginis, neff: this.neffs, n: s.game.n }, p.kind);
         else if (p.kind === 'lorenz') drawLorenz(p.chart, out.shares, out.potShare);
         else if (p.kind === 'ccdf') drawCcdf(p.chart, out.shares);
         else drawHistogram(p.chart, out.shares);
@@ -408,12 +415,20 @@ export class Panel {
       // the Learn chart each comes with (the Gini, or the effective number's photo); any other, with the Gini
       this.readouts.push({ watch, out, cell, kind: watch.name === NEFF ? 'neff' : 'gini' });
     }
-    // each chart a square of its own
-    for (const kind of spec.plots) {
+    // Each series has its own frame; time plots share stacked grid tiles.
+    const kinds: PlotKind[] = spec.plots.flatMap((kind): PlotKind[] => kind === 'gini' ? ['gini', 'neff'] : [kind]);
+    const C = WORDS.charts;
+    const descriptions: Record<PlotKind, readonly [string, string]> = {
+      gini: [C.giniTime, C.giniAbout],
+      neff: [C.neffTime, C.neffAbout],
+      lorenz: [C.lorenz, C.lorenzAbout],
+      ccdf: [C.ccdf, C.ccdfAbout],
+      histogram: [C.histogram, C.histogramAbout],
+    };
+    for (const kind of kinds) {
       const tile = document.createElement('figure');
       tile.className = `tile plot ${kind}`;
-      const C = WORDS.charts;
-      const [title, about] = kind === 'gini' ? [C.time, C.timeAbout] : kind === 'lorenz' ? [C.lorenz, C.lorenzAbout] : kind === 'ccdf' ? [C.ccdf, C.ccdfAbout] : [C.histogram, C.histogramAbout];
+      const [title, about] = descriptions[kind];
       const chart = new Chart(title, about, BLOCKS['panel.plot']?.fields?.kind?.[kind] ?? title);
       tile.append(chart.svg);
       zoomable(tile, title);
@@ -596,8 +611,25 @@ export class Panel {
   /** The squares: the controls (the Story's rows in it when it lends them), a square's card, then the charts. */
   private rows(): void {
     this.transport.replaceChildren(...[this.modelName, this.bar, this.view, this.chartButtons, this.people, this.sharing, this.navigationRow].filter((x): x is HTMLElement => !!x));
-    this.controls.replaceChildren(...[this.modelActions, this.knobs, this.numbers, this.note, this.extra].filter((x): x is HTMLElement => !!x));
-    this.root.replaceChildren(this.transport, this.controls, this.card.tile, ...this.plots.slice(0, 1).map((p) => p.tile), this.turnover.tile, ...this.plots.slice(1).map((p) => p.tile), this.said);
+    const title = chartHeading(WORDS.panel.controlsTitle);
+    title.classList.add('control-title');
+    title.setAttribute('role', 'heading');
+    title.setAttribute('aria-level', '2');
+    title.setAttribute('aria-label', WORDS.panel.controlsTitle);
+    const body = document.createElement('div');
+    body.className = 'controls-body';
+    body.append(...[this.modelActions, this.knobs, this.numbers, this.note, this.extra].filter((x): x is HTMLElement => !!x));
+    this.controls.replaceChildren(title, body);
+    const times = [...this.plots.filter((p) => isTimePlot(p.kind)).map((p) => p.tile), this.turnover.tile];
+    this.timeStacks = [];
+    for (let i = 0; i < times.length; i += 2) {
+      const stack = document.createElement('div');
+      stack.className = 'time-stack';
+      stack.append(...times.slice(i, i + 2));
+      stack.hidden = [...stack.children].every((tile) => (tile as HTMLElement).hidden);
+      this.timeStacks.push(stack);
+    }
+    this.root.replaceChildren(this.transport, this.controls, this.card.tile, ...this.timeStacks, ...this.plots.filter((p) => !isTimePlot(p.kind)).map((p) => p.tile), this.said);
   }
 
   /**
@@ -640,12 +672,16 @@ export class Panel {
       }
     }
     for (const row of [this.bar, this.view, this.chartButtons, this.people, this.knobs, this.modelActions]) row.hidden = ![...row.children].some((c) => !(c as HTMLElement).hidden);
-    const shows = (kind: string) => show ? show.charts === true || (Array.isArray(show.charts) && show.charts.includes(kind)) : this.session().charted.has(kind);
+    const shows = (kind: string) => {
+      const includes = (charts: readonly string[]) => charts.includes(kind) || (kind === 'neff' && charts.includes('gini'));
+      return show ? show.charts === true || (Array.isArray(show.charts) && includes(show.charts)) : this.session().charted.has(kind) || (kind === 'neff' && this.session().charted.has('gini'));
+    };
     for (const r of this.readouts) r.cell.hidden = !!show && !shows(r.kind);
     this.numbers.hidden = this.readouts.every((r) => r.cell.hidden);
     for (const p of this.plots) p.tile.hidden = !shows(p.kind);
     // Play's own (Learn does not teach it), and not while a yard is only looked at
     this.turnover.tile.hidden = !!show || !this.session().charted.has('turnover');
+    for (const stack of this.timeStacks) stack.hidden = [...stack.children].every((tile) => (tile as HTMLElement).hidden);
     this.note.hidden = !this.focused;
     this.controls.hidden = [this.modelActions, this.knobs, this.numbers, this.note].every((r) => r.hidden) && (!this.extra || this.extra.hidden);
     this.root.hidden = false;
@@ -1006,28 +1042,4 @@ function moodWord(v: number, a: number): 'glad' | 'excited' | 'calm' | 'tense' |
 function squaresSaid(n: number): string {
   const k = Math.round(Math.sqrt(n));
   return (k * k === n ? WORDS.panel.squaresSaid : WORDS.panel.squaresCount).replace('{n}', String(n)).replace(/\{k\}/g, String(k));
-}
-
-/** The most a row gap may stretch so the squares end where the yard ends, CSS px. */
-const ROW_GAP_MOST = 48;
-
-/**
- * The squares laid out to the yard's height exactly (owner, 2026-10-22: aligned to the yard from top to bottom):
- * rows × tile + (rows − 1) × the row gap = `height`, the columns within `width`; the biggest squares that do, the row
- * gap stretched (never past ROW_GAP_MOST) when the width is what limits them. Null if none do.
- */
-export function alignedTo(height: number, width: number, count: number): { cols: number; tile: number; rowGap: number } | null {
-  const gap = TILE.gap;
-  let best: { cols: number; tile: number; rowGap: number } | null = null;
-  for (let rows = 1; rows <= count; rows++) {
-    const cols = Math.ceil(count / rows);
-    if (cols > 4) continue;
-    const tile = Math.floor(Math.min((height - (rows - 1) * gap) / rows, (width - (cols - 1) * gap) / cols));
-    if (tile < 100) continue;
-    if (rows === 1 && tile < height) continue;
-    const rowGap = rows > 1 ? (height - rows * tile) / (rows - 1) : 0;
-    if (rowGap > ROW_GAP_MOST) continue;
-    if (!best || tile > best.tile) best = { cols, tile, rowGap };
-  }
-  return best;
 }

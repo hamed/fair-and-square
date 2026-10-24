@@ -212,9 +212,10 @@ describe('the Play panel', () => {
     expect(s.game.n).toBe(25);
   });
 
-  it('owner 2026-10-22: the time square: the Gini and the effective number next to it on one round axis; turnover, Play’s own square', () => {
+  it('Gini and effective number keep separate frames and round axes within one stacked tile', () => {
     const s = new Session({ n: 16 });
     const { root, panel } = mount(s);
+    Object.defineProperty(root, 'clientWidth', { value: 500 });
     const before = s.traded;
     s.run('fx off; round 10; handoff gini');
     // a round of 16 trading in pairs at a 10% stake moves a few percent of everything
@@ -226,15 +227,17 @@ describe('the Play panel', () => {
     s.run('levy 0.2');
     expect(s.traded).toBe(t);
     panel.update(5000);
-    const strips = () => [...root.querySelectorAll('.tile.gini .chart .strip')].map((x) => x.textContent);
-    expect(strips()).toEqual(['Gini', 'Effective number']);
     expect(root.querySelector<HTMLElement>('.tile.turnover')!.hidden).toBe(true);
-    // its plot an exact square: the frame's rects stack to one s × s square
-    const frames = [...root.querySelectorAll<SVGRectElement>('.tile.gini .chart .frame')];
-    const w = Number(frames[0].getAttribute('width'));
-    const top = Number(frames[0].getAttribute('y'));
-    const last = frames.at(-1)!;
-    expect(Number(last.getAttribute('y')) + Number(last.getAttribute('height')) - top).toBeCloseTo(w, 9);
+    for (const kind of ['gini', 'neff']) {
+      const tile = root.querySelector<HTMLElement>(`.tile.${kind}`)!;
+      expect(tile.hidden).toBe(false);
+      const frames = [...tile.querySelectorAll<SVGRectElement>('.chart .frame')];
+      expect(frames).toHaveLength(1);
+      expect(Number(frames[0].getAttribute('height'))).toBeLessThan(Number(frames[0].getAttribute('width')) / 2);
+      expect(tile.parentElement?.classList.contains('time-stack')).toBe(true);
+      expect(tile.querySelectorAll('.tick')).toHaveLength(4);
+      expect([...tile.querySelectorAll('.chart .label')].some((label) => label.textContent?.startsWith('Round'))).toBe(true);
+    }
     // in Learn (the Story shows what it has taught), no turnover
     panel.showing = { sliders: [], controls: [], charts: true, marks: [] };
     panel.update(6000);
@@ -250,10 +253,10 @@ describe('the Play panel', () => {
     const label = () => [...ccdf.querySelectorAll('.chart .label')].map((x) => x.textContent).join(' | ');
     expect(label()).toContain('(log)');
     // a click on the x axis, gated against double-clicks
-    const xAxis = [...ccdf.querySelectorAll<SVGRectElement>('.chart .hit')].find((r) => r.getAttribute('aria-label')!.startsWith('share of all the money'))!;
+    const xAxis = [...ccdf.querySelectorAll<SVGRectElement>('.chart .hit')].find((r) => r.getAttribute('aria-label')!.startsWith('Money share'))!;
     xAxis.dispatchEvent(new MouseEvent('click', { detail: 1, bubbles: true }));
     await new Promise((r) => setTimeout(r, 320));
-    expect(label()).not.toContain('share of all the money (log)');
+    expect(label()).not.toContain('Money share (log)');
     ccdf.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     expect(ccdf.classList.contains('zoomed')).toBe(true);
     expect(root.querySelector('.tile.placeholder')).not.toBeNull();

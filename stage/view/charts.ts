@@ -1,7 +1,7 @@
 /**
  * The panel's charts, drawn the way the essay's sandbox draws them (src/lib/widgets/sandbox: PlotFrame, TimeSeries,
- * LorenzPlot, CcdfChart; owner, 2026-10-22): an SVG square whose plot is an exact square, its ticks, axis titles and
- * name outside it.
+ * LorenzPlot, CcdfChart; owner, 2026-10-22): one frame per plot, with titles and axis labels
+ * in the surrounding unframed margins, like the words around the yard.
  *
  *   hover        an insight fades in: where the pointer is in time, what the poorest half holds, the median and the top 1 %
  *   name         its one-line description
@@ -17,11 +17,11 @@ const NS = 'http://www.w3.org/2000/svg';
 const LINE = '#3d6aa8';
 const GAP_TINT = 'rgba(61, 106, 168, 0.12)';
 
-/** Every chart's geometry (viewBox units): the plot an exact square, s × s at (x, y); its margins hold the words. */
-export const FRAME = { W: 170, H: 170, x: 38, y: 16, s: 118 } as const;
-/** Between stacked strips (the time chart's), viewBox units; a tick label's width per character, about. */
+/** The plot fills its grid square. Labels overflow into the gutters between tiles. */
+export const FRAME = { W: 170, H: 170, x: 0, y: 0, s: 170 } as const;
+/** Between stacked strips, in viewBox units. */
 const STRIP_GAP = 7;
-const TICK_CHAR = 4.2;
+const LABEL_GAP = 4;
 
 export interface Axis {
   readonly lo: number;
@@ -92,6 +92,20 @@ export function logTicks(lo: number, hi: number): number[] {
   return out;
 }
 
+/** Label at most two round values within the scale, rather than arbitrary data-dependent limits. */
+function sparseTicks(axis: Axis, ticks: readonly number[]): number[] {
+  let candidates = ticks;
+  if (axis.log) {
+    const round: number[] = [];
+    for (let power = Math.floor(Math.log10(axis.lo)); power <= Math.ceil(Math.log10(axis.hi)); power++) {
+      for (const multiple of [1, 2, 5]) round.push(multiple * 10 ** power);
+    }
+    candidates = round;
+  }
+  const within = candidates.filter((v) => v >= axis.lo && v <= axis.hi);
+  return within.length > 1 ? [within[0], within[within.length - 1]] : within;
+}
+
 /** A number as a tick says it: whole above a thousand, else as many decimals as its size wants. */
 export function compact(v: number): string {
   const a = Math.abs(v);
@@ -112,24 +126,40 @@ function gated(handler: () => void, ms = 280): (e: MouseEvent) => void {
   };
 }
 
+/** Shared heading geometry for charts and the controls frame. */
+export function chartHeading(title: string, description = title): SVGSVGElement {
+  const svg = el('svg', { viewBox: `0 0 ${FRAME.W} ${FRAME.H}`, class: 'chart' });
+  const name = el('text', { class: 'name', x: FRAME.x, y: FRAME.y - LABEL_GAP }, svg);
+  name.textContent = title;
+  el('title', {}, name).textContent = description;
+  return svg;
+}
+
 export class Chart {
   readonly svg: SVGSVGElement;
   /** The chart's own toggles (log axes), kept across redraws. */
   readonly state: Record<string, boolean> = {};
   private readonly name: SVGTextElement;
-  private readonly description: SVGTitleElement;
+  private height: number = FRAME.H;
   private readonly insightLayer: SVGGElement;
   private pointer: number | null = null;
   private hovering = false;
   private last: { x: Axis; strips: readonly Strip[]; insight?: Insight } | null = null;
 
   constructor(title: string, description: string, aria: string) {
-    this.svg = el('svg', { viewBox: `0 0 ${FRAME.W} ${FRAME.H}`, class: 'chart', role: 'img', 'aria-label': aria });
-    this.name = el('text', { class: 'name', x: FRAME.x, y: FRAME.y - 5 });
-    this.name.textContent = title;
-    this.description = el('title', {}, this.name);
-    this.description.textContent = description;
+    this.svg = chartHeading(title, description);
+    this.svg.setAttribute('role', 'img');
+    this.svg.setAttribute('aria-label', aria);
+    this.name = this.svg.querySelector('text')!;
     this.insightLayer = el('g', { class: 'insight' });
+  }
+
+  /** Match a stacked time tile while preserving its data and axis toggles. */
+  resize(height: number): void {
+    if (!Number.isFinite(height) || height <= 0 || Math.abs(this.height - height) < 0.01) return;
+    this.height = height;
+    this.svg.setAttribute('viewBox', `0 0 ${FRAME.W} ${height}`);
+    this.again();
   }
 
   /** Draw: one shared x axis, the strips stacked over it (one strip: the whole square), and what hovering shows. */
@@ -139,7 +169,7 @@ export class Chart {
     const keep = [this.name];
     svg.replaceChildren(...keep);
     const n = Math.max(1, strips.length);
-    const h = (FRAME.s - (n - 1) * STRIP_GAP) / n;
+    const h = (this.height - (n - 1) * STRIP_GAP) / n;
     const left = FRAME.x;
     const right = FRAME.x + FRAME.s;
     const px = (v: number) => sane(left + fraction(x, v) * FRAME.s);
@@ -147,7 +177,7 @@ export class Chart {
     const data = el('g', { class: 'data' }, svg);
     const axes = el('g', { class: 'axes' }, svg);
     const xTicks = x.ticks ?? (x.log ? logTicks(x.lo, x.hi) : niceTicks(x.lo, x.hi));
-    const bottom = FRAME.y + FRAME.s;
+    const bottom = FRAME.y + this.height;
     strips.forEach((strip, k) => {
       const top = FRAME.y + k * (h + STRIP_GAP);
       const base = top + h;
@@ -158,8 +188,6 @@ export class Chart {
         const y = py(t);
         if (y < top - 0.5 || y > base + 0.5) continue;
         el('line', { x1: left, y1: y, x2: right, y2: y }, grid);
-        const label = el('text', { class: 'tick', x: left - 3, y: y + 2.6, 'text-anchor': 'end' }, axes);
-        label.textContent = strip.y.format(t);
       }
       // what the strip shows, clipped to it
       const clipId = `clip-${Math.random().toString(36).slice(2)}`;
@@ -173,30 +201,38 @@ export class Chart {
         t.textContent = strip.name;
       }
       if (n === 1) {
-        const t = el('text', { class: 'label rotated', x: 9, y: top + h / 2, 'text-anchor': 'middle', transform: `rotate(-90 9 ${top + h / 2})` }, axes);
+        const labelX = left - LABEL_GAP;
+        const t = el('text', { class: 'label rotated', x: labelX, y: top + h / 2, 'text-anchor': 'middle', transform: `rotate(-90 ${labelX} ${top + h / 2})` }, axes);
         t.textContent = `${strip.y.label}${strip.y.log ? ' (log)' : ''}`;
+        // Keep the upper tick within the chart's top edge; the lower tick extends below its position.
+        for (const v of sparseTicks(strip.y, yTicks)) {
+          const at = py(v);
+          const text = strip.y.format(v);
+          el('text', { class: 'tick', x: labelX, y: at, 'text-anchor': 'end', transform: `rotate(-90 ${labelX} ${at})` }, axes).textContent = text;
+        }
       }
-      if (strip.y.toggle) this.hit(0, top, left, h, strip.y.toggle, `${strip.name ?? strip.y.label}: log ↔ linear`);
+      if (strip.y.toggle) this.hit(left - 20, top, 20, h, strip.y.toggle, `${strip.name ?? strip.y.label}: log ↔ linear`);
     });
-    // tick labels from the right, each only where it does not run into the last one written
-    let room = Infinity;
-    for (const t of [...xTicks].reverse()) {
-      const at = px(t);
-      if (at < left - 0.5 || at > right + 0.5) continue;
-      const text = x.format(t);
-      const anchor = at < left + 8 ? 'start' : at > right - 8 ? 'end' : 'middle';
-      const width = TICK_CHAR * text.length;
-      const [from, to] = anchor === 'start' ? [at, at + width] : anchor === 'end' ? [at - width, at] : [at - width / 2, at + width / 2];
-      if (to > room - 2) continue;
-      room = from;
-      el('text', { class: 'tick', x: at, y: bottom + 10, 'text-anchor': anchor }, axes).textContent = text;
-    }
-    const xl = el('text', { class: 'label', x: right, y: FRAME.H - 6, 'text-anchor': 'end' }, axes);
+    const xl = el('text', { class: 'label', x: (left + right) / 2, y: bottom + LABEL_GAP, 'text-anchor': 'middle', 'dominant-baseline': 'hanging' }, axes);
     xl.textContent = `${x.label}${x.log ? ' (log)' : ''}`;
-    if (x.toggle) this.hit(left, bottom, FRAME.s, FRAME.H - bottom, x.toggle, `${x.label}: log ↔ linear`);
+    let tickBounds: readonly [number, number] | null = null;
+    for (const v of sparseTicks(x, xTicks).reverse()) {
+      const at = px(v);
+      const anchor = at < (left + right) / 2 ? 'start' : 'end';
+      const text = x.format(v);
+      if (Math.abs(at - (left + right) / 2) - xl.textContent.length * 2.2 < text.length * 4 + 5) continue;
+      const width = text.length * 4;
+      const from = anchor === 'start' ? at : at - width;
+      const to = from + width;
+      // The yard's shifted log mapping can place different round ticks at the same position.
+      if (tickBounds && from < tickBounds[1] + 3 && to > tickBounds[0] - 3) continue;
+      tickBounds = [from, to];
+      el('text', { class: 'tick', x: at, y: bottom + LABEL_GAP, 'text-anchor': anchor, 'dominant-baseline': 'hanging' }, axes).textContent = text;
+    }
+    if (x.toggle) this.hit(left, bottom, FRAME.s, 20, x.toggle, `${x.label}: log ↔ linear`);
     // hovering: the insight, over everything; its zone the plot itself
     svg.append(this.insightLayer);
-    const zone = el('rect', { class: 'hover', x: left, y: FRAME.y, width: FRAME.s, height: FRAME.s }, svg);
+    const zone = el('rect', { class: 'hover', x: left, y: FRAME.y, width: FRAME.s, height: this.height }, svg);
     // a redraw puts a new zone under a pointer that has not moved: it keeps where it was
     zone.addEventListener('pointerenter', (e) => this.hover(true, this.dataX(e) ?? this.pointer));
     zone.addEventListener('pointerleave', () => this.hover(false, null));
@@ -208,7 +244,7 @@ export class Chart {
   private dataX(e: PointerEvent): number | null {
     const x = this.last?.x;
     const r = this.svg.getBoundingClientRect();
-    const side = Math.min(r.width, r.height);
+    const side = Math.min(r.width, r.height * FRAME.W / this.height);
     if (!x || !(side > 0)) return null;
     const ox = r.left + (r.width - side) / 2;
     const f = Math.max(0, Math.min(1, (((e.clientX - ox) / side) * FRAME.W - FRAME.x) / FRAME.s));
@@ -229,12 +265,12 @@ export class Chart {
     const last = this.last;
     if (!this.hovering || !last) return;
     const n = Math.max(1, last.strips.length);
-    const h = (FRAME.s - (n - 1) * STRIP_GAP) / n;
+    const h = (this.height - (n - 1) * STRIP_GAP) / n;
     const px = (v: number) => sane(FRAME.x + fraction(last.x, v) * FRAME.s);
     // a time chart: a hairline where the pointer is, each strip's value there
     if (this.pointer !== null && last.strips.some((s) => s.at)) {
       const at = px(this.pointer);
-      el('line', { class: 'hair', x1: at, y1: FRAME.y, x2: at, y2: FRAME.y + FRAME.s }, g);
+      el('line', { class: 'hair', x1: at, y1: FRAME.y, x2: at, y2: FRAME.y + this.height }, g);
       last.strips.forEach((s, k) => {
         const text = s.at?.(this.pointer!);
         if (!text) return;
@@ -301,20 +337,21 @@ function roundAxis(chart: Chart, last: number): Axis {
   return { lo: log ? 1 : 0, hi: Math.max(10, last), log, label: WORDS.charts.round, format: compact, toggle: () => ((chart.state.roundLog = !log), chart.again()) };
 }
 
-/**
- * Time, two strips on one round axis (owner, 2026-10-22: two time charts in one square, the effective number next
- * to the Gini). Click the round axis: log ↔ linear; hover: each one's value at that round.
- */
-export function drawTime(chart: Chart, data: { rounds: readonly number[]; gini: readonly number[]; neff: readonly number[]; n: number }): void {
-  chart.again = () => drawTime(chart, data);
+/** One time series per frame. Click the round axis: log ↔ linear; hover: the value at that round. */
+export function drawTime(chart: Chart, data: { rounds: readonly number[]; gini: readonly number[]; neff: readonly number[]; n: number }, measure: 'gini' | 'neff' = 'gini'): void {
+  chart.again = () => drawTime(chart, data, measure);
   const W = WORDS.charts;
   const x = roundAxis(chart, data.rounds.at(-1) ?? 10);
-  const line = (rs: readonly number[], vs: readonly number[], colour = LINE) => (g: SVGGElement, px: (v: number) => number, py: (v: number) => number) => {
-    el('path', { class: 'line', d: path(rs, vs, px, py), stroke: colour }, g);
-  };
+  const values = measure === 'gini' ? data.gini : data.neff;
+  const y: Axis = measure === 'gini'
+    ? { lo: 0, hi: 1, label: W.gini, format: compact, ticks: [0, 0.5, 1] }
+    : { lo: 1, hi: Math.max(2, data.n), label: W.peopleCount, format: compact, ticks: [1, Math.max(2, data.n)] };
   const strips: Strip[] = [
-    { name: W.gini, y: { lo: 0, hi: 1, label: W.gini, format: compact, ticks: [0, 0.5, 1] }, paint: line(data.rounds, data.gini), at: (r) => fmt(valueAt(data.rounds, data.gini, r), (v) => v.toFixed(2)) },
-    { name: W.neff, y: { lo: 1, hi: Math.max(2, data.n), label: W.neff, format: compact, ticks: [1, Math.max(2, data.n)] }, paint: line(data.rounds, data.neff), at: (r) => fmt(valueAt(data.rounds, data.neff, r), (v) => v.toFixed(1)) },
+    {
+      y,
+      paint: (g, px, py) => el('path', { class: 'line', d: path(data.rounds, values, px, py), stroke: LINE }, g),
+      at: (r) => fmt(valueAt(data.rounds, values, r), (v) => v.toFixed(measure === 'gini' ? 2 : 1)),
+    },
   ];
   chart.draw(x, strips);
 }
@@ -325,6 +362,7 @@ export function drawTurnover(chart: Chart, t: { rounds: readonly number[]; value
   const top = Math.max(1, ...t.values) * 1.1;
   chart.draw(roundAxis(chart, t.rounds.at(-1) ?? 10), [
     {
+      // turnoverSeries already supplies percentage points, unlike the fraction-valued Lorenz and CCDF.
       y: { lo: 0, hi: top, label: WORDS.charts.moved, format: (v) => `${compact(v)}%` },
       paint: (g, px, py) => el('path', { class: 'line', d: path(t.rounds, t.values, px, py), stroke: LINE }, g),
       at: (r) => fmt(valueAt(t.rounds, t.values, r), (v) => `${v.toFixed(1)}%`),
@@ -446,7 +484,7 @@ export function drawHistogram(chart: Chart, shares: Float64Array): void {
     { lo: low, hi: top, label: W.average, format: compact },
     [
       {
-        y: { lo: 0, hi: most, label: W.people, format: compact },
+        y: { lo: 0, hi: most, label: W.peopleCount, format: compact },
         paint: (g, px, py) => {
           counts.forEach((c, k) => {
             if (!c) return;

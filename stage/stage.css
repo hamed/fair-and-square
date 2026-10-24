@@ -227,12 +227,13 @@ body {
   --cols: 1;
   --tile: 300px;
   display: grid;
-  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--cols), var(--tile));
+  justify-content: space-between;
   grid-template-rows: auto;
   grid-auto-rows: var(--tile);
-  /* rows as far apart as ends them at the yard's bottom (panel.ts alignedTo) */
-  gap: var(--row-gap, 10px) 10px;
-  padding: 38px 12px 12px;
+  /* Panel.layout budgets tile heights and label gutters together. */
+  gap: var(--row-gap, 32px) 32px;
+  padding: 38px 12px 32px 32px;
   overflow-y: auto;
   scrollbar-gutter: stable;
   flex: 0 1 auto;
@@ -242,6 +243,7 @@ body {
 }
 
 .readerpanel .transport {
+  inline-size: var(--panel-width, 100%);
   --control-width: 24px;
   position: relative;
   grid-column: 1 / -1;
@@ -277,7 +279,7 @@ body {
 .side { gap: 10px; }
 
 .readerpanel .tile {
-  inline-size: var(--tile);
+  inline-size: 100%;
   max-inline-size: 100%;
   min-inline-size: 0;
   min-block-size: 0;
@@ -286,18 +288,41 @@ body {
   border: 1px solid var(--wall);
 }
 
+.readerpanel .tile:is(.controls, .plot) {
+  aspect-ratio: 1;
+  align-self: start;
+}
+
+
 .readerpanel .tile.controls {
   container-type: inline-size;
+  position: relative;
+  overflow: visible;
+}
+
+.readerpanel .controls-body {
   display: flex;
   flex-direction: column;
   gap: 5px;
   padding: 6px 8px;
   overflow-y: auto;
+  block-size: 100%;
+}
+
+.readerpanel .control-title {
+  position: absolute;
+  inset-block-start: -1px;
+  inset-inline-start: -1px;
+  inline-size: calc(100% + 2px);
+  block-size: auto;
+  aspect-ratio: 1;
+  overflow: visible;
+  pointer-events: none;
 }
 
 /* Learn's blocks: room for a scrollbar kept always, as one coming and going would change the width, the blocks
    would refit to it, and the square would shake (owner, 2026-10-21) */
-.readerpanel .tile.controls:has(.program) {
+.readerpanel .tile.controls:has(.program) .controls-body {
   scrollbar-gutter: stable;
 }
 
@@ -381,12 +406,30 @@ body {
 .readerpanel .tile.controls:has(.program) {
   grid-column: 1 / -1;
   grid-row: span 3;
+  aspect-ratio: auto;
+  align-self: stretch;
 }
 
 .readerpanel .tile.plot {
-  padding: 6px;
+  padding: 0;
+  border: 0;
+  background: var(--floor);
   transition: opacity 0.3s;
+  cursor: zoom-in;
 }
+
+/* Two independent time plots occupy one square grid tile, including their shared label gutter. */
+.readerpanel .time-stack {
+  inline-size: var(--tile);
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  row-gap: var(--row-gap);
+  min-inline-size: 0;
+  block-size: var(--tile);
+}
+
+.readerpanel .time-stack[hidden] { display: none; }
+.readerpanel .time-stack .tile.plot { aspect-ratio: auto; block-size: 100%; }
 
 /* a chart flying in from the yard (Learn's hand-over): its square waits, then shows as it lands */
 .readerpanel .tile.arriving {
@@ -418,9 +461,10 @@ body {
   display: block;
   inline-size: 100%;
   block-size: 100%;
+  overflow: visible;
 }
 
-/* the charts (stage/view/charts.ts), the sandbox's way: the plot an exact square, its words outside it */
+/* Shared chart typography and frames; titles and labels occupy the unframed margins. */
 .chart {
   font-family: var(--sans);
   user-select: none;
@@ -433,27 +477,28 @@ body {
 
 .chart .frame {
   fill: none;
-  stroke: #a99980;
-  stroke-width: 0.8;
-}
-
-.chart .tick {
-  fill: var(--muted);
-  font-size: 7.5px;
-  font-variant-numeric: tabular-nums;
+  stroke: var(--wall);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  shape-rendering: crispEdges;
 }
 
 .chart .label {
-  fill: var(--muted);
+  fill: var(--ink);
   font-size: 8px;
   letter-spacing: 0.03em;
 }
 
+.chart .tick {
+  fill: var(--ink);
+  font-size: 7px;
+  font-variant-numeric: tabular-nums;
+}
+
 .chart .name {
   fill: var(--ink);
-  font-size: 9px;
-  font-weight: 650;
-  letter-spacing: 0.03em;
+  font-size: 10px;
+  font-weight: 400;
   cursor: help;
 }
 
@@ -531,11 +576,7 @@ body {
   outline: 2px solid var(--glow);
 }
 
-/* a chart's square, double-clicked: it fills the window; ✕, Escape or another double-click gives it back */
-.readerpanel .tile.plot {
-  cursor: zoom-in;
-}
-
+/* Double-click a plot to fill the window; Escape, its close button or another double-click returns it. */
 .readerpanel .tile.zoomed {
   position: fixed;
   inset: 0;
@@ -853,10 +894,12 @@ body {
   /* the squares: their top at the yard's top, as many as the side holds */
   .readerpanel {
     align-self: flex-start;
-    padding: 26px 0 0;
+    padding: 26px 0 32px 32px;
     margin-block-start: max(0px, calc(var(--yard-top, 10px) - 36px));
     max-block-size: calc(100vh - max(10px, var(--yard-top, 10px)) - 10px);
     flex: 0 0 auto;
+    overflow: visible;
+    scrollbar-gutter: auto;
   }
 
   .console {

@@ -34,11 +34,11 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       }));
       expect(label.bottom).toBeLessThan(label.top);
       expect(label.font).toContain('Gelasio');
-      if (viewport.width === 1440) {
-        const first = await toolbar.locator('[data-control=play]').boundingBox();
-        const share = await toolbar.locator('[data-control=share]').boundingBox();
-        expect(share!.y).toBe(first!.y);
-      }
+      // The wider chart gutters can wrap the bar; keep the sharing group together on either layout.
+      const embed = await toolbar.locator('[data-control=embed]').boundingBox();
+      const share = await toolbar.locator('[data-control=share]').boundingBox();
+      expect(share!.y).toBe(embed!.y);
+      expect(share!.x).toBeGreaterThan(embed!.x);
       if (mode === 'story') await expect(toolbar.locator('[data-control=play]')).toBeDisabled();
       else await expect(toolbar.locator('[data-control=play]')).toBeEnabled();
       if (mode === 'rules') {
