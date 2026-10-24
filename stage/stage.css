@@ -242,12 +242,13 @@ body {
 }
 
 .readerpanel .transport {
+  --control-width: 24px;
   position: relative;
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 4px;
+  gap: 8px calc(var(--control-width) / 2);
   padding: 10px;
   border: 1px solid var(--wall);
   background: var(--floor);
@@ -255,9 +256,10 @@ body {
 }
 
 .readerpanel .transport > .bar { gap: 3px; align-items: center; }
-.readerpanel .transport > :is(.view, .people) { margin-inline-start: 4px; }
-.readerpanel .transport button { min-inline-size: 24px; min-block-size: 28px; padding-inline: 2px; font-size: 12px; }
-.transport .sharing { margin-inline-start: auto; }
+.readerpanel .transport [data-control='restart'] { margin-inline-start: calc(var(--control-width) / 2 - 3px); }
+.readerpanel .transport > .sharing { justify-content: flex-start; margin-inline-end: auto; }
+.readerpanel .transport > :is(.view, .people, .sharing) { margin-inline-start: calc(var(--control-width) / 2); }
+.readerpanel .transport button { min-inline-size: var(--control-width); min-block-size: 28px; padding-inline: 2px; font-size: 12px; }
 .transport .current-model {
   position: absolute;
   inset-inline-start: 0;
