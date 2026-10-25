@@ -26,11 +26,13 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await page.evaluate(() => document.fonts.ready);
     await expect(page.locator('.log > li')).toHaveCount(7);
     await expect(page.locator('iframe')).toHaveCount(0);
+    const column = (await page.locator('#shapes > p').first().boundingBox())!;
 
     // Check the whole article, including late lazy images and the paired transformation clips.
     for (const artifact of await page.locator('.artifact').all()) {
       await artifact.scrollIntoViewIfNeeded();
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+      expect((await artifact.boundingBox())!.width).toBeLessThanOrEqual(column.width + 1);
     }
     for (const video of await page.locator('video[data-clip]').all()) {
       await video.scrollIntoViewIfNeeded();

@@ -770,13 +770,15 @@ img.tex {
   color: var(--muted);
 }
 
-/* Making-of: a reading column through a wider trail of the project's own artifacts. */
-.making-of main.wide { max-inline-size: 54rem; }
+/* Making-of: prose and artifacts follow one column, inset from the history's rail. */
+.making-of { --history-inset: 1.75rem; }
+.making-of main.wide { max-inline-size: 38rem; }
+.making-of main.wide .col { max-inline-size: 36rem; margin-inline-start: calc(var(--history-inset) + 2px); }
 .making-of header { margin-block-end: 3rem; }
 .making-of .kicker { max-inline-size: 32rem; font-style: italic; }
 .making-of .byline { font-size: 0.85rem; color: var(--muted); }
 .making-of .log { margin-block: 2rem 4rem; }
-.making-of .log > li { padding-inline-start: 1.75rem; padding-block-end: 4.5rem; }
+.making-of .log > li { padding-inline-start: var(--history-inset); padding-block-end: 4.5rem; }
 .making-of .log > li > p,
 .making-of .log h3,
 .making-of .fate,
@@ -784,12 +786,34 @@ img.tex {
 .making-of .born-section > p { max-inline-size: 36rem; }
 .making-of .log h2 { margin-block: 0.5rem 1.25rem; font-size: 1.6rem; line-height: 1.25; }
 .making-of h3 { margin-block: 2rem 0.75rem; font: 400 1.35rem/1.3 'Gelasio', Georgia, serif; }
-.making-of .artifact { margin: 1.75rem 0 2rem; }
+.making-of .artifact { max-inline-size: 36rem; margin: 1.75rem 0 2rem; }
 .making-of .artifact > a { display: block; }
 .making-of .artifact img { box-sizing: border-box; margin: 0; }
-.making-of figcaption { margin-block-start: 0.6rem; max-inline-size: 38rem; font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+
+/* Viewports trim empty screenshot margins; each link still opens the untouched archive. */
+.making-of .artifact-crop {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: var(--crop-width) / var(--crop-height);
+  border: 1px solid #d8d0bf;
+  background: #fbf8f1;
+}
+.making-of .artifact-crop img {
+  position: absolute;
+  inset-inline-start: calc(-100% * var(--crop-x) / var(--crop-width));
+  inset-block-start: calc(-100% * var(--crop-y) / var(--crop-height));
+  inline-size: calc(100% * var(--source-width) / var(--crop-width));
+  max-inline-size: none;
+  border: 0;
+}
+.making-of .clip { box-sizing: border-box; }
+.making-of .square-artifact .clip,
+.making-of .expression-artifact .clip { aspect-ratio: 1; }
+.making-of .expression-artifact { max-inline-size: 20rem; margin-inline: auto; }
+
+.making-of figcaption { margin-block-start: 0.6rem; max-inline-size: 36rem; font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
 .making-of figcaption p { margin-block: 0.5rem; }
-.making-of .ledger { max-inline-size: 32rem; }
+
 .making-of .fate { margin-block-start: 1.75rem; padding-block-start: 0.75rem; border-block-start: 1px solid #d8d0bf; }
 .making-of .discovery,
 .making-of .born-section { margin-block: 3rem 2rem; padding-block-start: 1.75rem; border-block-start: 1px solid #b9b09c; }
@@ -799,10 +823,6 @@ img.tex {
 .making-of .transform-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
 .making-of .transform-pair .artifact { margin-block-start: 0; }
 .making-of .quiet-cast { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: center; margin-block: 2.25rem; }
-.making-of .face-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.5rem 0.5rem; padding: 1.5rem 0; list-style: none; max-inline-size: 36rem; }
-.making-of .face-strip li { display: flex; flex-direction: column; align-items: center; gap: 1rem; font-size: 0.85rem; color: var(--muted); }
-.making-of .face-strip [data-sq] { font-size: 18px; }
-.making-of .coin-artifact { max-inline-size: 32rem; }
 .making-of .coin-faces { display: flex; flex-wrap: wrap; justify-content: center; gap: 2rem; padding-block: 1rem; }
 .making-of .coin-faces img { inline-size: min(36%, 9rem); border: 0; background: transparent; }
 .making-of .build-artifact { max-inline-size: 36rem; }
@@ -821,10 +841,10 @@ img.tex {
 .making-of button:focus-visible { outline: 3px solid #b58a21; outline-offset: 4px; }
 
 @media (max-width: 600px) {
+  .making-of { --history-inset: 1rem; }
   .making-of main { padding-block-start: 3rem; }
-  .making-of .log > li { padding-inline-start: 1rem; padding-block-end: 3rem; }
+  .making-of .log > li { padding-block-end: 3rem; }
   .making-of .transform-pair { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .making-of .face-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .making-of .live-yard { block-size: 38rem; }
   .making-of .quiet-cast .small { flex-basis: 100%; }
 }
