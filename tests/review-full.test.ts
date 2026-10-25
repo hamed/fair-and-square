@@ -259,7 +259,7 @@ describe('owner, 2026-10-21: the Gini as a gauge', () => {
       const g = statsOf(Float64Array.from(w)).gini;
       expect(height('triangle')).toBeCloseTo(1, 9);
       expect(height('gap') / height('triangle')).toBeCloseTo(g, 9);
-      expect(scene.labels.map((l) => l.text)).toEqual(['0', '1', g.toFixed(2)]);
+      expect(scene.labels.map((l) => l.text)).toEqual(['0.00', '1.00', g.toFixed(2)]);
       // the even line made of ghosts, one equal share each
       expect(scene.polys.filter((x) => x.fill === 'ghost')).toHaveLength(w.length);
     }
