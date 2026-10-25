@@ -71,7 +71,7 @@ describe('the about page, as data', () => {
     expect(order).toEqual(['hello', 'gift', 'play', 'elsewhere', 'pictures']);
     expect(page.querySelector('.kicker')!.textContent).toBe('Physicist. I build models you can play with.');
     const rows = [...page.querySelectorAll<HTMLElement>('#pictures figure.row')];
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(4);
     for (const r of rows) {
       const v = r.querySelector<HTMLVideoElement>('video[data-clip]')!;
       expect(existsSync(resolve(cwd(), 'public', v.getAttribute('poster')!))).toBe(true);
@@ -82,6 +82,7 @@ describe('the about page, as data', () => {
       expect(v.getAttribute('aria-label')).toBeTruthy();
       // the clip first, then its formula (the one in the picture, owner 2026-10-22) and its words
       expect(r.firstElementChild).toBe(v);
+      if (r.querySelector('.area-formula')) continue;
       const tex = r.querySelector('figcaption img.tex')!;
       expect(existsSync(resolve(cwd(), 'public', tex.getAttribute('src')!))).toBe(true);
       expect((tex.getAttribute('alt') ?? '').length).toBeGreaterThan(20);
@@ -174,7 +175,7 @@ describe('how it was made', () => {
       expect(existsSync(resolve(cwd(), path.startsWith('./stage/') ? path : `public/${path}`)), path).toBe(true);
     }
     const links = [...making.querySelectorAll('a[href]')].map((a) => a.getAttribute('href')!);
-    for (const reference of ['forbes.com', 'doi.org/10.1103/', 'arxiv.org/abs/cond-mat/0505588', 'doi.org/10.1037/', 'cit.li/coin/', 'jstor.org/', 'ncase.me/trust/', '1in8b.life/']) {
+    for (const reference of ['forbes.com', 'doi.org/10.1103/', 'arxiv.org/abs/cond-mat/0505588', 'doi.org/10.1037/', 'cit.li/coin/', 'jstor.org/', 'hamed.github.io/trust/', '1in8b.life/']) {
       expect(links.some((link) => link.includes(reference)), reference).toBe(true);
     }
     for (const book of making.querySelectorAll<HTMLAnchorElement>('a[href^="https://link.amazon/"]')) expect(book.relList.contains('sponsored')).toBe(true);

@@ -73,6 +73,29 @@ function encode(name, shots, [a, b], box) {
   console.log(`${name}: ${own.length} frames, ${(b - a).toFixed(1)} s`);
 }
 
+// Packed trading uses the real Play session: area encodes wealth throughout.
+if (wanted('packed')) {
+  const page = await browser.newPage({ viewport: VIEW, deviceScaleFactor: 2 });
+  await page.goto(`${STAGE}?opening=0`);
+  await page.waitForFunction(() => window.fns);
+  await page.evaluate(() => window.fns.run('n 16; fx off; round 40; room; pose fold; fx on; fx chart on'));
+  await page.waitForTimeout(2500);
+  const yard = await page.evaluate(() => {
+    const r = document.querySelector('canvas').getBoundingClientRect();
+    const f = window.fns.floor();
+    return { x: r.left + f.left, y: r.top + f.top, w: f.right - f.left, h: f.bottom - f.top };
+  });
+  const { shots, out } = await record(page, async () => {
+    const start = Date.now() / 1000;
+    await page.evaluate(() => window.fns.run('play 4'));
+    await page.waitForTimeout(14000);
+    await page.evaluate(() => window.fns.run('pause'));
+    return [start, Date.now() / 1000];
+  });
+  encode('packed', shots, out, { x: yard.x + 0.14 * yard.w, y: yard.y + 0.14 * yard.h, w: 0.72 * yard.w, h: 0.72 * yard.h });
+  await page.close();
+}
+
 // ——— Learn's acts
 const learn = LEARN.filter((c) => wanted(c.name));
 if (learn.length) {

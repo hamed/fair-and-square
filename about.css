@@ -828,3 +828,6 @@ img.tex {
   .making-of .live-yard { block-size: 38rem; }
   .making-of .quiet-cast .small { flex-basis: 100%; }
 }
+
+/* The area encoding precedes the three statistical transformations. */
+.row figcaption p.area-formula { grid-column: 2; align-self: center; justify-self: center; font: italic 1.4rem/1.5 Gelasio, Georgia, serif; text-align: center; }

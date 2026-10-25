@@ -28,6 +28,7 @@
           Hi, I'm Hamed, a physicist. I love little simple things that have huge, unexpected impacts, and I love to
           share them with the world, like this simple little fair game and its surprising results.
         </p>
+        <p><a href="making-of.html">How Fair and Square was made →</a><br /><a href="https://github.com/hamed/fair-and-square">The code on GitHub →</a></p>
       </section>
 
       <!-- The family spans the column; support and bookshop links share the row beneath it. -->
@@ -98,7 +99,18 @@
       </section>
 
       <!-- each clip, and beside it the formula it draws: nothing more than what is in the picture -->
-      <section id="pictures" aria-label="Three measures, drawn by the squares">
+      <section id="pictures" aria-label="Wealth and its measures, drawn by the squares">
+        <figure class="row">
+          <video class="clip" data-clip muted loop playsinline preload="metadata" poster="about/packed.jpg" aria-label="Unequal squares trade while packed together; each square's area represents its share of the wealth">
+            <source src="about/packed.webm" type="video/webm" />
+            <source src="about/packed.mp4" type="video/mp4" />
+          </video>
+          <figcaption>
+            <p class="area-formula" role="math" aria-label="Each square's area divided by the total square area equals its wealth share">A<sub>i</sub> / ∑A<sub>j</sub> = s<sub>i</sub></p>
+            <p><b>Wealth as area.</b> The squares keep trading, packed together. Each square's area is proportional to its wealth: its fraction of the total coloured area is its share of the money. Gaps between squares are not money.</p>
+          </figcaption>
+        </figure>
+
         <figure class="row">
           <video class="clip" data-clip muted loop playsinline preload="metadata" poster="about/stairs.jpg" aria-label="Four squares line up, become a tower, then stairs; a curve runs through their corners and a gauge fills to the Gini">
             <source src="about/stairs.webm" type="video/webm" />
@@ -134,7 +146,6 @@
       </section>
 
       <footer class="foot col">
-        <p><a href="making-of.html">How Fair and Square was made →</a></p>
         <p id="thanks">
           Thanks. The model is not mine: Anirban Chakraborti wrote it down and Brian Hayes named it the yard-sale model,
           both in 2002; Bruce Boghosian and colleagues worked out its equations
