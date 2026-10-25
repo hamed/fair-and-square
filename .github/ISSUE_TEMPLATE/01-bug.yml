@@ -9,6 +9,11 @@ body:
     validations:
       required: true
   - type: textarea
+    id: game_link
+    attributes:
+      label: Game link (optional)
+      description: If this concerns a particular game state, use Share in the game's control bar and paste the full link here. It carries simulation parameters and progress to help recreate what you saw.
+  - type: textarea
     id: expected
     attributes:
       label: Expected behaviour (optional)
@@ -31,4 +36,4 @@ body:
     id: settings
     attributes:
       label: Game settings (optional)
-      description: Share a game link, or describe the mode, model and settings.
+      description: Describe any mode, model or settings details not captured by the shared link.

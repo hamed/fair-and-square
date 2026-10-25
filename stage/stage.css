@@ -313,11 +313,17 @@ body {
   position: absolute;
   inset-block-start: -1px;
   inset-inline-start: -1px;
-  inline-size: calc(100% + 2px);
-  block-size: auto;
-  aspect-ratio: 1;
+  /* Learn's program spans columns; its heading keeps the same scale as a chart tile. */
+  inline-size: var(--tile);
+  block-size: var(--tile);
   overflow: visible;
   pointer-events: none;
+}
+
+/* The lesson's short grid rows should not shrink its heading below the SVG's natural text size. */
+.readerpanel .tile.controls:has(.program) .control-title {
+  min-inline-size: 170px;
+  min-block-size: 170px;
 }
 
 /* Learn's blocks: room for a scrollbar kept always, as one coming and going would change the width, the blocks

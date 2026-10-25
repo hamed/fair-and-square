@@ -9,6 +9,11 @@ body:
     validations:
       required: true
   - type: textarea
+    id: game_link
+    attributes:
+      label: Game link (optional)
+      description: If this concerns a particular game state, use Share in the game's control bar and paste the full link here. It carries simulation parameters and progress to help recreate what you saw.
+  - type: textarea
     id: location
     attributes:
       label: Location (optional)

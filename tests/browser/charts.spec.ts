@@ -95,3 +95,35 @@ test('the primary grid uses the panel width and returns to the same layout after
   await expect.poll(async () => Math.abs((await measure()).top - before.top)).toBeLessThan(1);
   await expect.poll(async () => Math.abs((await measure()).left - before.left)).toBeLessThan(1);
 });
+
+test('Learn keeps the Controls heading above the expanded blocks without enlarging it', async ({ page }) => {
+  for (const viewport of [
+    { width: 1920, height: 1080 }, { width: 1440, height: 900 },
+    { width: 1280, height: 720 }, { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/?opening=0');
+    await page.waitForFunction(() => (window as any).fns);
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page.locator('.control-title')).toBeVisible();
+    const normalTitle = (await page.locator('.control-title .name').boundingBox())!;
+    await page.locator('#menu [data-go="story"]').click();
+    await page.evaluate(() => (window as any).fns.story().enterAct(3));
+    for (const key of ['blocks', 'number']) {
+      await page.evaluate((key) => {
+        const r = (window as any).fns.story();
+        r.start(r.beats.findIndex((b: { key: string }) => b.key === key));
+      }, key);
+      await expect(page.locator('.program .blocklyPath').first()).toBeVisible();
+      await expect.poll(async () => {
+        const title = (await page.locator('.control-title .name').boundingBox())!;
+        const toolbar = (await page.locator('.transport').boundingBox())!;
+        const controls = (await page.locator('.tile.controls').boundingBox())!;
+        return title.height <= normalTitle.height + 1
+          && title.y >= toolbar.y + toolbar.height + 4
+          // SVG text bounds include the font's descender space below its baseline.
+          && title.y + title.height <= controls.y + 5;
+      }).toBe(true);
+    }
+  }
+});
