@@ -25,6 +25,8 @@ test('built pages keep links, assets, anchors and campaign tags inside the deplo
   for (const file of ['', 'index.html', 'about.html', 'making-of.html']) {
     await page.goto(new URL(`${file}?opening=0&utm_content=k7m2q9vd`, root).href);
     await expect(page.locator('a[data-track-nav]').first()).toBeAttached();
+    await expect(page.locator('link[rel="icon"][sizes="32x32"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveCount(1);
     const links = await page.locator('a[href], script[src], link[href], img[src], source[src], video[poster]').evaluateAll((els) =>
       els.map((el) => ({ tag: el.tagName, href: new URL(el.getAttribute('href') ?? el.getAttribute('src') ?? el.getAttribute('poster')!, location.href).href })),
     );
@@ -62,6 +64,72 @@ test('built pages keep links, assets, anchors and campaign tags inside the deplo
 const state = (page: Page) => page.evaluate(() => {
   const run = (window as any).fns.session().game.run;
   return { hash: run.hash(), round: run.round, steps: run.steps, inputs: run.inputs.length };
+});
+
+test('built initial HTML exposes complete sharing metadata and deployable preview assets', async ({ page, baseURL }) => {
+  const production = 'https://hamed.github.io/fair-and-square/';
+  const assets = new Map<string, number[]>();
+  for (const [file, path, type] of [
+    ['index.html', '', 'website'], ['about.html', 'about.html', 'profile'], ['making-of.html', 'making-of.html', 'article'],
+  ]) {
+    const response = await page.request.get(new URL(file, baseURL).href);
+    expect(response.ok()).toBe(true);
+    const metadata = await page.evaluate((html) => {
+      // Parse the response itself: the game replaces its favicon at runtime.
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      return {
+        title: doc.title,
+        tags: [...doc.head.querySelectorAll('meta[name], meta[property]')].map((el) => [el.getAttribute('name') ?? el.getAttribute('property'), el.getAttribute('content')]),
+        canonical: [...doc.querySelectorAll('link[rel="canonical"]')].map((el) => el.getAttribute('href')),
+        icons: [...doc.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]')].map((el) => ({ href: el.getAttribute('href')!, size: el.getAttribute('sizes') })),
+        schemas: [...doc.querySelectorAll('script[type="application/ld+json"]')].map((el) => JSON.parse(el.textContent!)),
+      };
+    }, await response.text());
+    const tag = (name: string) => {
+      const values = metadata.tags.filter(([key]) => key === name).map(([, value]) => value);
+      expect(values, `${file}: ${name}`).toHaveLength(1);
+      expect(values[0]).toBeTruthy();
+      return values[0]!;
+    };
+    expect(metadata.canonical).toEqual([`${production}${path}`]);
+    expect(tag('og:url')).toBe(metadata.canonical[0]);
+    expect(tag('og:type')).toBe(type);
+    expect(tag('og:site_name')).toBe('Fair and Square');
+    expect(tag('og:title')).toBe(metadata.title);
+    expect(tag('twitter:title')).toBe(metadata.title);
+    expect(tag('og:description')).toBe(tag('description'));
+    expect(tag('twitter:description')).toBe(tag('description'));
+    expect(tag('author')).toBe('Hamed Seyed-Allaei');
+    expect(tag('robots')).toContain('max-image-preview:large');
+    expect(tag('twitter:card')).toBe('summary_large_image');
+    expect(tag('twitter:creator')).toBe('@allaei');
+    expect(tag('twitter:image')).toBe(tag('og:image'));
+    expect(tag('twitter:image:alt')).toBe(tag('og:image:alt'));
+    expect(tag('og:image:type')).toBe('image/png');
+    expect(tag('og:image:width')).toBe('1200');
+    expect(tag('og:image:height')).toBe('630');
+    expect(metadata.schemas).toHaveLength(1);
+    expect(metadata.schemas[0]['@context']).toBe('https://schema.org');
+    const graph = metadata.schemas[0]['@graph'] as Record<string, any>[];
+    const hasType = (name: string) => graph.some((node) => [node['@type']].flat().includes(name));
+    expect(hasType('Person')).toBe(true);
+    expect(hasType(file === 'index.html' ? 'VideoGame' : file === 'about.html' ? 'ProfilePage' : 'Article')).toBe(true);
+    assets.set(tag('og:image'), [1200, 630]);
+    expect(metadata.icons).toHaveLength(2);
+    for (const icon of metadata.icons) assets.set(icon.href, icon.href.endsWith('/favicon.png') ? [32, 32] : [180, 180]);
+  }
+  for (const [url, dimensions] of assets) {
+    expect(url).toMatch(/^https:\/\/hamed\.github\.io\/fair-and-square\//);
+    const asset = new URL(url);
+    expect(asset.search).toBe('');
+    expect(asset.hash).toBe('');
+    const response = await page.request.get(new URL(url.slice(production.length), baseURL).href);
+    expect(response.ok(), url).toBe(true);
+    expect(response.headers()['content-type']).toContain('image/png');
+    const bytes = await response.body();
+    expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual(dimensions);
+  }
 });
 
 for (const file of ['', 'index.html']) {

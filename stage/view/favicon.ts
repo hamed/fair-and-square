@@ -110,7 +110,7 @@ function faviconURL(P: number): string {
 /** The page's icons, 16 and 32 px. */
 export function setFavicon(): void {
   for (const P of [16, 32]) {
-    const link = document.createElement('link');
+    const link = document.querySelector<HTMLLinkElement>(`link[rel="icon"][sizes="${P}x${P}"]`) ?? document.createElement('link');
     link.rel = 'icon';
     link.type = 'image/png';
     link.setAttribute('sizes', `${P}x${P}`);
