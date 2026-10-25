@@ -176,8 +176,8 @@ export function lorenz(wealth: ArrayLike<number>, curve: number, even: number, g
   if (steps.label > 0) {
     // centred on the bars (owner, 2026-10-22): 0 under them, 1 over them, the Gini over its own line; large
     const mid = GAUGE.x + GAUGE.w / 2;
-    scene.labels.push({ x: mid, y: BOX - 0.01, text: '0', size: 1.7, centre: true });
-    scene.labels.push({ x: mid, y: BOX + 1, text: '1', size: 1.7, centre: true, above: true });
+    scene.labels.push({ x: mid, y: BOX - 0.01, text: '0.00', size: 1.7, centre: true });
+    scene.labels.push({ x: mid, y: BOX + 1, text: '1.00', size: 1.7, centre: true, above: true });
     scene.labels.push({ x: mid, y: BOX + gini, text: gini.toFixed(2), size: 2, centre: true, above: true });
   }
   if (curve > 0) scene.polys.push({ pts: points, open: true, stroke: 'ink', alpha: curve });
