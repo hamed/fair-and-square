@@ -24,6 +24,7 @@ import type { Session } from '../console/session.ts';
 import { WORDS } from '../words.en.ts';
 import { drawLockupSquare, type LockupFace } from './lockup.ts';
 import { paint } from './faces.ts';
+import { QUIET_HEART, SUPPORT_FONT_SHARE, supportInk, type SupportAppearance } from './support.ts';
 import { colourOf, type Frame, type StageView } from './render.ts';
 import type { Stage } from '../core/stage.ts';
 import { FAIR, FOOT, GRID, LETTERS, SERIF, cells, inkOf, letter, setWord, wordmark, type Glyph, type Ink, type Lettering, type Wordmark } from './logo.ts';
@@ -42,6 +43,7 @@ const GLOW = '#e9b949';
 
 /** The byline: the author's name, nothing before it, as on a cover. */
 export const NAME = 'Hamed Seyed-Allaei';
+export const SUPPORT_LABEL = 'support ♥';
 
 /**
  * The buttons: the menu beside the logo (the first four, one to each row of
@@ -71,6 +73,8 @@ export interface Type {
     readonly ink: Ink;
     readonly feet: Ink;
   };
+  /** The quiet serif link that follows the author above the yard. */
+  readonly support: { readonly glyphs: readonly Glyph[]; readonly ink: Ink; readonly heart: Ink };
   /** The buttons' words, and how far their letters reach above and below the baseline, all of them (em). */
   readonly buttons: readonly { readonly label: readonly Glyph[]; readonly ink: Ink }[];
   readonly up: number;
@@ -82,6 +86,8 @@ export interface Type {
 export function measureType(): Type {
   const mark = wordmark();
   const name = setWord(NAME, SERIF, 400);
+  const support = setWord(SUPPORT_LABEL, SERIF, 400);
+  const heart = inkOf(support.filter((g) => g.ch === '♥'));
   const buttons = BUTTONS.map((b) => {
     // the tabs in the logo's face: they are the game's character, as the wordmark is
     const label = setWord(b.label, SERIF, 400);
@@ -93,6 +99,7 @@ export function measureType(): Type {
     foot: inkOf(mark.glyphs.slice(0, 1), ...FOOT).left,
     low: mark.ink.bottom,
     name: { glyphs: name, ink: inkOf(name), feet: inkOf(name, ...FOOT) },
+    support: { glyphs: support, ink: supportInk(inkOf(support), heart), heart },
     buttons,
     up: Math.max(...buttons.map((b) => -b.ink.top)),
     down: Math.max(...buttons.map((b) => b.ink.bottom)),
@@ -145,12 +152,13 @@ const widthOf = (h: number) => h * (BUTTON_CELLS + ((BUTTON_CELLS - 1) * GRID.ga
 const gutterOf = (h: number) => (h * GRID.gap) / SQ[1].side;
 
 /** The smallest the line gets on screen, px: readable lettering, and tabs a finger can press (WCAG's 24 px targets). */
-const MIN = { title: 18, name: 13, button: 24 };
+const MIN = { title: 18, name: 13, support: 10, button: 24 };
 
 /** The line above the yard, laid out: the title's and the name's pens, the tabs (standing on the wall, or not), and how far it reaches above the yard's top edge. */
 interface Header {
   readonly title: Pen;
   readonly name: Pen;
+  readonly support: Pen;
   readonly buttons: readonly (Slot & { readonly w: number })[];
   /** The tabs stand on the yard's wall (it is under all of them), so they are tabs; else they are boxes. */
   readonly onWall: boolean;
@@ -163,8 +171,8 @@ const EDGE = 8;
 /**
  * The line above the yard, screen px. The title alone on the left, from the
  * wall's outer top-left corner (the f's outer foot on it); on the right the
- * name, its last i's foot on the outer top-right corner, and before it the
- * buttons, each a small copy of one beside the logo, as tabs: standing on the
+ * name followed by the smaller support link, ending at the outer top-right
+ * corner, and before them the buttons, each a small copy of one beside the logo, as tabs: standing on the
  * wall, which is their bottom edge. Never smaller than MIN. Where that does
  * not fit on one line over the yard, it takes more lines (the tabs on the
  * wall, the title and the name above them, or each on a line of its own) and,
@@ -176,6 +184,8 @@ const EDGE = 8;
 export function headerAt(type: Type, f: Frame): Header {
   const te = Math.max(TITLE_EM * f.scale, MIN.title);
   const ne = Math.max(NAME_EM * f.scale, MIN.name);
+  const se = Math.max(SUPPORT_FONT_SHARE * ne, MIN.support);
+  const supportRoom = 0.4 * ne + (type.support.ink.right - type.support.ink.left) * se;
   const wall = f.top - WALL_OUT;
   const left = f.left - WALL_OUT;
   const right = f.right + WALL_OUT;
@@ -187,9 +197,9 @@ export function headerAt(type: Type, f: Frame): Header {
   const g = gutterOf(h);
   const tabsWidth = across(h);
   const titleWidth = (type.mark.ink.right - type.foot) * te;
-  const nameWidth = (type.name.feet.right - type.name.ink.left) * ne;
-  const below = Math.max(0, type.low * te, type.name.ink.bottom * ne);
-  const above = Math.max(-type.mark.ink.top * te, -type.name.ink.top * ne);
+  const nameWidth = (type.name.feet.right - type.name.ink.left) * ne + supportRoom;
+  const below = Math.max(0, type.low * te, type.name.ink.bottom * ne, type.support.ink.bottom * se);
+  const above = Math.max(-type.mark.ink.top * te, -type.name.ink.top * ne, -type.support.ink.top * se);
   // the layouts, widest first: one line (with two tabs' height of empty space after the title); tabs on the
   // wall with the title and the name above them; then each on a line of its own
   const one = titleWidth + 2 * h + tabsWidth + BUTTON_NAME_GAP * h + nameWidth;
@@ -222,7 +232,7 @@ export function headerAt(type: Type, f: Frame): Header {
   let buttons: (Slot & { w: number })[];
   if (lines === 1) {
     titleY = nameY = wall - lead - below;
-    buttons = tabs(br - type.name.feet.right * ne + type.name.ink.left * ne - BUTTON_NAME_GAP * h);
+    buttons = tabs(br - nameWidth - BUTTON_NAME_GAP * h);
   } else {
     buttons = tabs(br);
     nameY = wall - h - lead - below;
@@ -230,8 +240,9 @@ export function headerAt(type: Type, f: Frame): Header {
   }
   const onWall = buttons[0].x >= left - 0.5 && buttons[buttons.length - 1].x + w <= right + 0.5;
   const title = { x: bl - type.foot * te, y: titleY, em: te };
-  const name = { x: br - type.name.feet.right * ne, y: nameY, em: ne };
-  return { title, name, buttons, onWall, height: f.top - Math.min(titleY - above, wall - h) };
+  const name = { x: br - supportRoom - type.name.feet.right * ne, y: nameY, em: ne };
+  const support = { x: br - type.support.ink.right * se, y: nameY, em: se };
+  return { title, name, support, buttons, onWall, height: f.top - Math.min(titleY - above, wall - h) };
 }
 
 /** How much room the line needs above the yard's top edge, px. */
@@ -365,9 +376,9 @@ function drawButton(ctx: CanvasRenderingContext2D, type: Type, k: number, slot: 
  * yard's mood) alone on the left; the buttons, then the name, on the right. Lettered left to right
  * whatever the canvas was left in, and leaving it as it was (review
  * 2026-10-18, finding 5: the axes' end alignment broke the spacing). Returns
- * where the title, the name and each button are, for the controls over them.
+ * where the title, the name, the support link and each button are, for the controls over them.
  */
-export function drawHeader(ctx: CanvasRenderingContext2D, type: Type, f: Frame, playing = false, current: 'play' | 'story' | 'rules' = 'play', glows: ReadonlySet<string> = new Set(), face: LockupFace | null = null): { title: Box; name: Box; buttons: Box[] } {
+export function drawHeader(ctx: CanvasRenderingContext2D, type: Type, f: Frame, playing = false, current: 'play' | 'story' | 'rules' = 'play', glows: ReadonlySet<string> = new Set(), face: LockupFace | null = null, attention: SupportAppearance = QUIET_HEART): { title: Box; name: Box; support: Box; buttons: Box[] } {
   const h = headerAt(type, f);
   ctx.save();
   ctx.textAlign = 'left';
@@ -377,8 +388,17 @@ export function drawHeader(ctx: CanvasRenderingContext2D, type: Type, f: Frame, 
   // tabs on the wall, the one you are in (Play, Story or Rules) open into the yard; off the wall's length, boxes
   const buttons = h.buttons.map((slot, k) => drawButton(ctx, type, k, slot, 1, playing && current === 'play', h.onWall ? 1 : 0, h.onWall && BUTTONS[k].id === current, glows.has(`tab:${BUTTONS[k].id}`)));
   run(ctx, type.name.glyphs, h.name, () => AMP);
+  const heart = type.support.heart;
+  const cx = (heart.left + heart.right) / 2;
+  const cy = (heart.top + heart.bottom) / 2;
+  for (const g of type.support.glyphs) {
+    if (g.ch === '♥') {
+      const scale = attention.scale;
+      glyph(ctx, g, h.support.x + (cx + scale * (g.x - cx)) * h.support.em, h.support.y + cy * (1 - scale) * h.support.em, h.support.em * scale, attention.colour);
+    } else glyph(ctx, g, h.support.x + g.x * h.support.em, h.support.y, h.support.em, AMP);
+  }
   ctx.restore();
-  return { title: boxOf(type.mark.ink, h.title), name: boxOf(type.name.ink, h.name), buttons };
+  return { title: boxOf(type.mark.ink, h.title), name: boxOf(type.name.ink, h.name), support: boxOf(type.support.ink, h.support), buttons };
 }
 
 // ———————————————————————————————————————————— geometry (the opening's world: the yard, 2 × 2, y down; the box at [0.5, 1.5]²)
@@ -604,6 +624,8 @@ export class Opening {
   face: LockupFace | null = null;
   /** Where the name was last drawn, for the link over it. */
   byline: Box | null = null;
+  /** Only on the yard's header, once the cover has unfolded. */
+  support: Box | null = null;
   /** Where each button was last drawn (null when it is not there), for the controls over them. */
   controls: (Box | null)[] = BUTTONS.map(() => null);
   /** The held cover's full graphic, including its menu column; the HTML copy shares these edges in portrait. */
@@ -827,6 +849,7 @@ export class Opening {
       // the line as the stage will draw it
       const line = drawHeader(ctx, type, frame, false, this.current, new Set(), this.face);
       this.byline = line.name;
+      this.support = line.support;
       this.controls = line.buttons;
       return;
     }

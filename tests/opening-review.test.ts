@@ -9,8 +9,9 @@ import { temperament } from '../stage/essay/face/moments.ts';
 import type { Glyph, Ink } from '../stage/view/logo.ts';
 import { awaitFonts } from '../stage/view/fonts.ts';
 import { keyAction } from '../stage/view/keys.ts';
-import { BUTTONS, NAME, OPENING_END, Opening, bodiesAt, castOf, drawHeader, headerAt, headerHeight, type Type } from '../stage/view/opening.ts';
+import { BUTTONS, NAME, SUPPORT_LABEL, OPENING_END, Opening, bodiesAt, castOf, drawHeader, headerAt, headerHeight, type Type } from '../stage/view/opening.ts';
 import { StageView, type Frame } from '../stage/view/render.ts';
+import { supportInk } from '../stage/view/support.ts';
 
 // ———————————————————————————————————————— a canvas without a browser
 
@@ -74,6 +75,8 @@ function fakeType(): Type {
   const amp = run('&', 'Gelasio', 700);
   const mark = run('fair & ', 'Gelasio', 700);
   const name = run(NAME);
+  const support = run(SUPPORT_LABEL);
+  const heart = { ...support.ink, left: 0.5 * (SUPPORT_LABEL.length - 1) + 0.02 };
   const buttons = BUTTONS.map((b) => {
     const r = run(b.label);
     return { label: r.glyphs, ink: r.ink };
@@ -84,6 +87,7 @@ function fakeType(): Type {
     foot: 0.02,
     low: 0.02,
     name: { glyphs: name.glyphs, ink: name.ink, feet: name.ink },
+    support: { ...support, ink: supportInk(support.ink, heart), heart },
     buttons,
     up: 0.77,
     down: 0.23,
@@ -263,10 +267,13 @@ describe('opening review 2026-10-18', () => {
       }
       expect(h.title.em).toBeGreaterThanOrEqual(18);
       expect(h.name.em).toBeGreaterThanOrEqual(13);
+      expect(h.support.em).toBeGreaterThanOrEqual(10);
+      expect(h.support.em).toBeLessThan(h.name.em);
+      expect(h.support.y).toBe(h.name.y);
       // the title and the name: their ink on screen, apart from each other and from every tab
       const type = fakeType();
       const ink = (pen: { x: number; y: number; em: number }, i: Ink) => ({ x0: pen.x + i.left * pen.em, x1: pen.x + i.right * pen.em, y0: pen.y + i.top * pen.em, y1: pen.y + i.bottom * pen.em });
-      const words = [ink(h.title, type.mark.ink), ink(h.name, type.name.ink)];
+      const words = [ink(h.title, type.mark.ink), ink(h.name, type.name.ink), ink(h.support, type.support.ink)];
       const all = [...words, ...boxes];
       for (let i = 0; i < all.length; i++)
         for (let j = i + 1; j < all.length; j++) {

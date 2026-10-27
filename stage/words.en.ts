@@ -116,7 +116,7 @@ export const WORDS = {
     /** Said to a screen reader when Be a square has picked you (the yard shows it on your card). */
     youSay: 'You are square number {rank} of {n}, with {share} of all the money.',
     share: 'Share',
-    shareTip: 'copy this yard,\nwith a line on what it shows',
+    shareTip: 'preview and copy a link to this yard',
     /**
      * What a shared yard says, ahead of its link (docs/brand.md: the find goes with the link, in the sharer's own
      * numbers; nothing invented). {rounds}, {top}: the richest's share; {rank} of {n}, {share}: one square's. Drafts.
@@ -131,9 +131,23 @@ export const WORDS = {
       tag: '#FairAndSquare',
     },
     embed: 'Embed',
-    embedTip: 'copy code for a web page',
+    embedTip: 'preview and copy code for a web page',
     copied: 'Copied',
     /** The embed's frame title, for screen readers. */
     frameTitle: 'Fair and Square',
+  },
+  shareDialog: {
+    close: 'Close',
+    preview: 'Preview of the shared simulation',
+    playback: 'Playback',
+    live: 'Live',
+    frozen: 'Frozen',
+    playbackHint: 'Live continues trading; frozen starts paused.',
+    link: 'Link',
+    code: 'Embed code',
+    copy: 'Copy',
+    copied: 'Copied ✓',
+    failed: 'Could not copy. Select the text and copy it.',
+    support: 'Buy me a coffee',
   },
 } as const;

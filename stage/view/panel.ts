@@ -23,6 +23,7 @@ import { colourOf } from './render.ts';
 import { wear, type IconName } from './icons.ts';
 import { sharedUrl, track, type AnalyticsData } from '../analytics.ts';
 import { simulationSummary } from '../analytics/simulation.ts';
+import { ShareDialog } from './share.ts';
 
 /** Refresh the numbers and plots this often, ms. */
 const EVERY = 200;
@@ -97,6 +98,8 @@ interface SliderView {
 
 export class Panel {
   analyticsContext: () => 'learn' | 'play' | 'build' = () => 'play';
+  preview: (session: Session) => HTMLCanvasElement | null = () => null;
+  private shareDialog: ShareDialog | null = null;
   private readonly root: HTMLElement;
   private readonly main: () => Session;
   /** A yard looked at instead of the page's (Learn's three yards, one clicked), and its name. */
@@ -702,28 +705,6 @@ export class Panel {
     return b;
   }
 
-  /** `text` to the clipboard; done, the button lights a moment and says so. */
-  private copy(b: HTMLButtonElement, text: () => string, result?: (outcome: 'copied' | 'failed') => void): void {
-    if (!navigator.clipboard) { result?.('failed'); return; }
-    let writing: Promise<void>;
-    try { writing = navigator.clipboard.writeText(text()); }
-    catch { result?.('failed'); return; }
-    void writing.then(
-      () => {
-        result?.('copied');
-        const was = b.getAttribute('aria-label') ?? '';
-        b.setAttribute('aria-label', WORDS.panel.copied);
-        b.classList.add('copied');
-        this.said.textContent = WORDS.panel.copied;
-        setTimeout(() => {
-          b.setAttribute('aria-label', was);
-          b.classList.remove('copied');
-        }, 1500);
-      },
-      () => result?.('failed'),
-    );
-  }
-
   /** This yard's link, as it is now (the address bar follows). */
   private link(source: 'yard' | 'square' | 'embed'): string {
     const hash = this.session().share();
@@ -731,34 +712,27 @@ export class Panel {
     return sharedUrl(`${location.origin}${location.pathname}`, hash, source);
   }
 
-  /**
-   * The yard sent on with what it shows (square `i`'s place, or the richest's if -1), in the sharer's own numbers:
-   * a phone's share sheet, else the line and the link copied.
-   */
+  /** A fixed snapshot and replay link, with copying kept separate from the optional support link. */
   private send(b: HTMLButtonElement, i: number): void {
-    const text = sharedLine(this.session(), i);
-    const source = i < 0 ? 'yard' : 'square';
-    const data: AnalyticsData = { source, context: this.analyticsContext(), ...simulationSummary(this.session()) };
-    const native = !!navigator.share && matchMedia('(pointer: coarse)').matches;
-    const outcome = (status: string) => track('share', { ...data, method: native ? 'native' : 'clipboard', outcome: status });
-    outcome('attempt');
-    const url = this.link(source);
-    if (native) {
-      try {
-        void navigator.share({ title: WORDS.panel.frameTitle, text, url }).then(
-          () => outcome('handed_off'),
-          (error: unknown) => outcome(error instanceof Error && error.name === 'AbortError' ? 'cancelled' : 'failed'),
-        );
-      } catch { outcome('failed'); }
-    } else this.copy(b, () => `${text} ${url}`, outcome);
+    this.share(b, i < 0 ? 'yard' : 'square', i);
   }
 
   private embed(b: HTMLButtonElement): void {
-    const data: AnalyticsData = { source: 'embed', context: this.analyticsContext(), method: 'clipboard', ...simulationSummary(this.session()) };
-    track('share', { ...data, outcome: 'attempt' });
-    const url = this.link('embed');
-    this.copy(b, () => `<iframe src="${url}&embed=1" title="${WORDS.panel.frameTitle}" width="640" height="640" style="border:0"></iframe>`,
-      (outcome) => track('share', { ...data, outcome }));
+    this.share(b, 'embed', -1);
+  }
+
+  private share(b: HTMLButtonElement, source: 'yard' | 'square' | 'embed', i: number): void {
+    const session = this.session();
+    const data: AnalyticsData = { source, context: this.analyticsContext(), method: 'clipboard', ...simulationSummary(session) };
+    const caption = sharedLine(session, i);
+    const url = this.link(source);
+    let preview: HTMLCanvasElement | null = null;
+    try { preview = this.preview(session); } catch { /* sharing works without a preview */ }
+    this.shareDialog ??= new ShareDialog();
+    this.shareDialog.open({
+      kind: source === 'embed' ? 'embed' : 'share', url, caption, preview,
+      onCopy: (outcome, mode) => track('share', { ...data, ...(mode ? { embed_mode: mode } : {}), outcome }),
+    }, b);
   }
 
   /** Which arrangement the yard stands in now (its id), if one of ARRANGE. */
@@ -865,7 +839,7 @@ export class Panel {
     const label = document.createElement('span');
     label.textContent = WORDS.panel.squares;
     group.append(label);
-    for (const n of [4, 9, 16, 36, 64, 256, 1024, null]) {
+    for (const n of [4, 9, 10, 16, 36, 64, 100, 256, null]) {
       const button = document.createElement('button');
       button.type = 'button';
       button.value = String(n ?? this.session().game.n);

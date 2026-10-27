@@ -34,7 +34,7 @@ describe('the Play panel', () => {
     const group = () => root.querySelector('.population')!;
     const pressed = () => [...group().querySelectorAll<HTMLButtonElement>('[aria-pressed="true"]:not([hidden])')].map((b) => b.textContent);
     expect(pressed()).toEqual(['25']);
-    for (const n of [4, 9, 16, 36, 64, 256, 1024]) {
+    for (const n of [4, 9, 10, 16, 36, 64, 100, 256]) {
       group().querySelector<HTMLButtonElement>(`button[value="${n}"]:not([data-current])`)!.click();
       panel.update(2000 + n * 1000);
       expect(s.game.n).toBe(n);

@@ -140,10 +140,17 @@ for (const file of ['', 'index.html']) {
     await page.evaluate(() => (window as any).fns.run('fx off; round 3'));
     const before = await state(page);
     await page.locator('#panel [data-control="share"]').click();
+    await page.locator('.share-dialog [data-share-copy]').click();
+    await expect(page.locator('.share-dialog [data-share-copy]')).toHaveText('Copied ✓');
+    await page.locator('.share-dialog [data-share-close]').click();
     await page.locator('#panel [data-control="embed"]').click();
+    await page.locator('.share-dialog [data-share-mode="frozen"]').click();
+    await page.locator('.share-dialog [data-share-copy]').click();
+    await expect(page.locator('.share-dialog [data-share-copy]')).toHaveText('Copied ✓');
+    await page.locator('.share-dialog [data-share-close]').click();
     const [shared, embed] = await page.evaluate(() => (window as any).__writes as string[]);
     const yard = new URL(shared.match(/https?:\/\/\S+$/)![0]);
-    const frame = new URL(embed.match(/src="([^"]+)"/)![1]);
+    const frame = new URL(await page.evaluate((code) => new DOMParser().parseFromString(code, 'text/html').querySelector('iframe')!.src, embed));
     for (const [url, source] of [[yard, 'yard'], [frame, 'embed']] as const) {
       expect(url.origin).toBe(entry.origin);
       expect(url.pathname).toBe(entry.pathname);

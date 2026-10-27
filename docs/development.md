@@ -260,8 +260,13 @@ them, so a repeat is the same experiment and a new one changes only what it
 says (review 2026-10-21, recheck 3). Then speed (1 to 1,000 rounds a second on a log
 track; up to 3 a second every trade is shown, faster ones happen at once),
 squares (2 to 1,000; a new yard when let go), Wander, In the box, Line up
-(pressed again: back to standing), Be a square, Share (copies a link that
-replays this yard) and Embed (copies an iframe).
+(pressed again: back to standing), Be a square, Share and Embed. The two sharing
+controls open a native dialog with an immediate snapshot of the actual yard and
+a selectable replay link or iframe code. Copy writes once on activation; only
+after success does “Buy me a coffee” appear beside it. Embed offers Live (start trading)
+and Frozen (start paused), both from the captured state. Preview capture does not
+load another simulation or alter the original one. Close, backdrop click or
+Escape dismisses the dialog immediately, including during a pending clipboard write.
 
 **The about page.** `about.html` is prose with the stage's people standing in
 it: the stage's squares and the essay's faces, small enough for a line of text.

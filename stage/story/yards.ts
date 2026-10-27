@@ -21,6 +21,7 @@ import { StageView } from '../view/render.ts';
 import { STORY } from './words.en.ts';
 import type { Widget, WidgetContext } from './widgets.ts';
 import { simulationSummary } from '../analytics/simulation.ts';
+import { sharePreview } from '../view/share-preview.ts';
 
 /**
  * The yards' rules: very unequal, between, very equal; dramatic, so each shows what it is within seconds (owner,
@@ -94,6 +95,13 @@ export class YardsWidget implements Widget {
     this.area = area;
     this.seed = seed;
     this.look = look;
+  }
+
+  /** A share of a yard looked at uses that yard's drawing, not the main canvas. */
+  preview(session: Session): HTMLCanvasElement | null {
+    const yard = this.yards.find((y) => y.session === session);
+    const canvas = yard?.el.querySelector('canvas');
+    return yard && canvas ? sharePreview(canvas, yard.view.floor) : null;
   }
 
   mount(ctx: WidgetContext, config: Readonly<Record<string, unknown>>): void {

@@ -641,10 +641,6 @@ body {
   cursor: default;
 }
 
-.readerpanel .control.copied {
-  background: #f6dd9a;
-}
-
 .readerpanel :focus-visible,
 .strip :focus-visible {
   outline: 3px solid var(--glow);
@@ -928,7 +924,7 @@ body {
   }
 }
 
-/* ——— the menu: the title, the name and the tabs are drawn on the canvas; these lie over them, invisible but for
+/* ——— the menu: the title, the name, support and the tabs are drawn on the canvas; these lie over them, invisible but for
    focus and hover (the menu's box stays out of the page's grid: main.ts places them one by one). The title's says
    its name in words, "Fair and Square" ——— */
 
@@ -938,6 +934,7 @@ body {
 
 .menu > *,
 .byline,
+.support-link,
 .lockup {
   position: fixed;
   color: transparent;
@@ -982,12 +979,14 @@ body {
   background: rgb(77 39 28 / 8%);
 }
 
-.byline:hover {
+.byline:hover,
+.support-link:hover {
   box-shadow: inset 0 -1px 0 var(--muted);
 }
 
 .menu > :focus-visible,
-.byline:focus-visible {
+.byline:focus-visible,
+.support-link:focus-visible {
   outline: 2px solid var(--muted);
   outline-offset: 2px;
 }

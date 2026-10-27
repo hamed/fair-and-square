@@ -36,6 +36,9 @@ import { statsOf } from './core/stats.ts';
 import { YARD } from './core/figure.ts';
 import { incomingShareSource, initAnalyticsLinks, track, trackOnce } from './analytics.ts';
 import { simulationSummary } from './analytics/simulation.ts';
+import { KOFI_URL } from './config.ts';
+import { supportAppearance } from './view/support.ts';
+import { sharePreview } from './view/share-preview.ts';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const canvas = $<HTMLCanvasElement>('stage');
@@ -48,6 +51,8 @@ const form = $<HTMLFormElement>('prompt');
 const input = $<HTMLInputElement>('cmd');
 const toggle = $<HTMLButtonElement>('toggle');
 const byline = $<HTMLAnchorElement>('byline');
+const supportLink = $<HTMLAnchorElement>('support-link');
+supportLink.href = KOFI_URL;
 const coverCopy = $<HTMLElement>('cover-copy');
 /** Over the drawn title: its name in words, for screen readers and on hover (the drawing is "fair &" and a square). */
 const lockup = $<HTMLElement>('lockup');
@@ -134,6 +139,12 @@ let opening: Opening | null = null;
 let waiting = opens;
 /** Where the name was drawn last frame: the link to the about page sits over it. */
 let named: Box | null = null;
+/** Where the small support link was drawn beside the name above the yard. */
+let supported: Box | null = null;
+/** Visible time in the yard: the cover and time in another tab do not count. */
+let supportSeconds = 0;
+let supportAt: number | null = null;
+document.addEventListener('visibilitychange', () => { supportAt = null; });
 /** Where the title (the lockup) was drawn last frame. */
 let titled: Box | null = null;
 /** Where the buttons on the line above the yard were drawn last frame. */
@@ -154,9 +165,10 @@ awaitFonts(fontsReady(), 4000, {
         const modelGap = `${frame.top - 3 - header.name.y - descent}px`;
         if (app.style.getPropertyValue('--model-name-size') !== modelSize) app.style.setProperty('--model-name-size', modelSize);
         if (app.style.getPropertyValue('--model-name-gap') !== modelGap) app.style.setProperty('--model-name-gap', modelGap);
-        const line = drawHeader(ctx, type, frame, session.playing, tab(), session.glows, lockupFace);
+        const line = drawHeader(ctx, type, frame, session.playing, tab(), session.glows, lockupFace, supportAppearance(supportSeconds, view.reduced, header.name.em / header.support.em));
         titled = line.title;
         named = line.name;
+        supported = line.support;
         buttons = line.buttons;
       },
       height: (frame) => headerHeight(type, frame),
@@ -357,6 +369,7 @@ const yardsWidget = new YardsWidget(() => {
   const f = view.floor;
   return { left: c.left + f.left, top: c.top + f.top, width: f.right - f.left, height: f.bottom - f.top };
 }, SEED, (s, name) => panelView.focus(s, name));
+panelView.preview = (s) => s === session ? sharePreview(canvas, view.floor) : yardsWidget.preview(s);
 
 (window as unknown as { fns: unknown }).fns = { session: () => session, run: (line: string) => runLine(line), editor: () => drawer.blocks, story: () => runner, strip: () => strip, floor: () => ({ ...view.floor }) };
 
@@ -454,6 +467,8 @@ function openingState(): OpeningState {
 window.addEventListener('keydown', (e) => {
   // a key something on the page has already used (Blockly's own navigation) is not the page's too
   if (e.defaultPrevented) return;
+  // The dialog keeps its typing, navigation and native Escape; none of them operate the game behind it.
+  if (document.querySelector('dialog.share-dialog[open]')) return;
   // Native disclosure activation and reading/scrolling keep their keys, without starting or advancing the game.
   if (e.target instanceof Element && e.target.closest('#game-info')) return;
   const action = keyAction(e.key, keyTarget(e.target), openingState(), mode === 'story', document.documentElement.dir === 'rtl');
@@ -558,6 +573,7 @@ window.addEventListener(
   'wheel',
   (e) => {
     if (mode !== 'story' || !runner) return;
+    if (document.querySelector('dialog.share-dialog[open]')) return;
     if (e.target instanceof Element && e.target.closest('#side, #rules, .program, .blocklyWidgetDiv')) return;
     const now = performance.now();
     if (now < wheelUntil) return;
@@ -680,6 +696,7 @@ function frame(now: number): void {
       lockupFace.update(0, dt, pointerAt);
       opening.frame(dt);
       place(byline, opening.byline);
+      place(supportLink, opening.support);
       place(lockup, null);
       menu.forEach((el, k) => place(el, opening?.controls[k] ?? null));
       placeCover();
@@ -710,6 +727,10 @@ function frame(now: number): void {
   }
   runner?.frame(dt);
   session.frame(dt);
+  if (!document.hidden) {
+    if (supportAt !== null) supportSeconds += Math.max(0, now - supportAt) / 1000;
+    supportAt = now;
+  } else supportAt = null;
   lockupFace.update(statsOf(session.game.wealth).gini, dt, pointerAt);
   view.render(session, dt, now);
   placeStory(now);
@@ -724,6 +745,7 @@ function frame(now: number): void {
   panelView.update(now);
   drawer.update();
   place(byline, named);
+  place(supportLink, supported);
   place(lockup, titled);
   placeCredit();
   flyHandoff();

@@ -1,0 +1,197 @@
+.share-dialog {
+  inline-size: min(30rem, calc(100vw - 32px));
+  max-inline-size: calc(100vw - 32px);
+  max-block-size: calc(100dvh - 32px);
+  margin: auto;
+  padding: 18px;
+  border: 1px solid var(--wall);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 1rem/1.4 var(--sans);
+  overflow: hidden;
+}
+
+.share-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.share-dialog::backdrop {
+  background: rgb(40 37 31 / 28%);
+}
+
+.share-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+  gap: 12px;
+}
+
+.share-dialog h2 {
+  margin: 0;
+  font: 400 1.35rem/1.2 var(--serif);
+}
+
+.share-dialog button {
+  padding: 6px 12px;
+  border: 1px solid var(--brown);
+  border-radius: 0;
+  background: var(--floor);
+  color: var(--brown);
+  font: inherit;
+  cursor: pointer;
+}
+
+.share-dialog button:hover {
+  background: var(--tan);
+}
+
+.share-dialog button:focus-visible,
+.share-dialog textarea:focus-visible,
+.share-dialog a:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: 3px;
+}
+
+.share-dialog .share-close {
+  inline-size: 30px;
+  block-size: 30px;
+  padding: 0;
+  border-color: var(--faint);
+  color: var(--muted);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.share-dialog-body {
+  min-block-size: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.share-figure {
+  margin: 0 0 14px;
+}
+
+.share-picture {
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  margin: 0 auto 10px;
+  border: 1px solid var(--faint);
+  background: var(--floor);
+}
+
+.share-preview {
+  display: block;
+  inline-size: auto;
+  block-size: auto;
+  max-inline-size: 100%;
+  max-block-size: min(180px, 28dvh);
+  object-fit: contain;
+}
+
+.share-figure figcaption {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.share-playback {
+  margin-block-end: 12px;
+}
+
+.share-modes {
+  display: inline-flex;
+}
+
+.share-modes button + button {
+  border-inline-start: 0;
+}
+
+.share-modes button[aria-pressed='true'] {
+  background: var(--brown);
+  color: var(--floor);
+}
+
+.share-playback p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.share-dialog label {
+  display: block;
+  margin-block-end: 5px;
+  font-size: 0.9rem;
+}
+
+.share-dialog textarea {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 3.5em;
+  padding: 8px;
+  border: 1px solid var(--faint);
+  border-radius: 0;
+  background: var(--floor);
+  color: var(--ink);
+  font: 0.85rem/1.45 var(--sans);
+  overflow-wrap: anywhere;
+  resize: vertical;
+}
+
+.share-dialog-footer {
+  flex: 0 0 auto;
+}
+
+.share-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-copy {
+  min-inline-size: 6rem;
+}
+
+.share-status {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.share-status:empty {
+  display: none;
+}
+
+.share-support {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border: 1px solid var(--brown);
+  background: var(--floor);
+  color: var(--brown);
+  font: inherit;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.share-support:hover {
+  background: var(--tan);
+}
+
+@media (max-height: 500px) {
+  .share-dialog {
+    padding: 12px;
+  }
+
+  .share-dialog[open] {
+    gap: 8px;
+  }
+
+  .share-preview {
+    max-block-size: 90px;
+  }
+}

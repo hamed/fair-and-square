@@ -32,6 +32,13 @@ async function open(page: Page, url = '/?opening=0') {
   await page.waitForFunction(() => (window as any).fns && (window as any).umami);
 }
 const menu = (page: Page, name: string) => page.locator(`#menu [data-go="${name}"]`).evaluate((el: HTMLElement) => el.click());
+async function copyDialog(page: Page, frozen = false) {
+  const dialog = page.locator('.share-dialog');
+  if (frozen) await dialog.locator('[data-share-mode="frozen"]').click();
+  await dialog.locator('[data-share-copy]').click();
+  await expect(dialog.locator('[data-share-copy]')).toHaveText('Copied ✓');
+  await dialog.locator('[data-share-close]').click();
+}
 const state = (page: Page) => page.evaluate(() => {
   const s = (window as any).fns.session();
   return { hash: s.game.run.hash(), round: s.game.run.round, steps: s.game.run.steps, inputs: s.game.run.inputs.length };
@@ -44,6 +51,7 @@ test('campaign IDs follow engagement into About and Making Of, without escaping 
   expect((await events(page, 'play_engaged'))[0].data.campaign_id).toBe('k7m2q9vd');
   const before = await state(page);
   await page.locator('#panel [data-control="share"]').click();
+  await copyDialog(page);
   await page.waitForFunction(() => (window as any).__writes.length === 1);
   const shared = await page.evaluate(() => (window as any).__writes[0].match(/https?:\/\/\S+$/)[0]);
   expect(new URL(shared).search).toBe('?fs_share=yard');
@@ -258,6 +266,7 @@ test('clipboard yard, square and embed shares preserve replay and do not add pag
   await page.evaluate(() => (window as any).fns.run('fx off; rule beta 0.3; rule tax 0.01; round 7'));
   const before = await state(page);
   await page.locator('#panel [data-control="share"]').click();
+  await copyDialog(page);
   await page.waitForFunction(() => (window as any).__writes.length === 1);
   const text = await page.evaluate(() => (window as any).__writes[0]);
   const url = new URL(text.match(/https?:\/\/\S+$/)![0]);
@@ -266,12 +275,15 @@ test('clipboard yard, square and embed shares preserve replay and do not add pag
   expect(await state(page)).toEqual(before);
   expect(await page.evaluate(() => (window as any).__pageviews)).toEqual(['/?opening=0']);
   await page.locator('#panel [data-control="embed"]').click();
+  await copyDialog(page, true);
   await page.waitForFunction(() => (window as any).__writes.length === 2);
   const embed = await page.evaluate(() => (window as any).__writes[1]);
   expect(embed).toContain('?fs_share=embed#');
-  expect(embed).toContain('&embed=1');
+  const iframeUrl = await page.evaluate((code) => new DOMParser().parseFromString(code, 'text/html').querySelector('iframe')!.src, embed);
+  expect(new URLSearchParams(new URL(iframeUrl).hash.slice(1)).get('embed')).toBe('1');
   await page.evaluate(() => { (window as any).fns.session().selected = 0; });
   await page.locator('#panel [data-control="card-share"]').click();
+  await copyDialog(page);
   await page.waitForFunction(() => (window as any).__writes.length === 3);
   const shares = await events(page, 'share');
   expect(shares.map((e: any) => [e.data.source, e.data.outcome])).toEqual([
@@ -292,33 +304,36 @@ test('clipboard yard, square and embed shares preserve replay and do not add pag
     expect(await page.evaluate(() => (window as any).__pageviews)).toEqual(['/']);
     await page.locator('#panel [data-control="share"]').click();
     expect(await events(page, 'shared_link_open')).toHaveLength(1);
+    await page.locator('.share-dialog [data-share-close]').click();
   }
-  const iframeUrl = embed.match(/src="([^"]+)"/)![1];
   await open(page, iframeUrl);
   await expect(page.locator('body')).toHaveClass(/embed/);
   expect((await events(page, 'shared_link_open'))[0].data).toMatchObject({ source: 'embed', status: 'loaded' });
   expect(await state(page)).toEqual(before);
 });
 
-test('share outcomes distinguish clipboard failure and native handoff, cancellation and failure', async ({ page }) => {
+test('share records clipboard outcomes only after Copy, including on touch devices', async ({ page }) => {
   await open(page);
   await page.evaluate(() => { navigator.clipboard.writeText = () => Promise.reject(new Error('denied')); });
   await page.locator('#panel [data-control="share"]').click();
+  expect(await events(page, 'share')).toEqual([]);
+  await page.locator('.share-dialog [data-share-copy]').click();
   await expect.poll(async () => (await events(page, 'share')).length).toBe(2);
   expect((await events(page, 'share'))[1].data).toMatchObject({ method: 'clipboard', outcome: 'failed' });
-  for (const result of ['handed_off', 'cancelled', 'failed']) {
-    await page.evaluate((result) => {
-      const media = window.matchMedia.bind(window);
-      window.matchMedia = (query) => query === '(pointer: coarse)' ? { matches: true } as MediaQueryList : media(query);
-      navigator.share = async () => {
-        if (result === 'cancelled') throw new DOMException('cancelled', 'AbortError');
-        if (result === 'failed') throw new Error('failed');
-      };
-    }, result);
-    await page.locator('#panel [data-control="share"]').click();
-    await expect.poll(async () => (await events(page, 'share')).at(-1).data.outcome).toBe(result);
-    expect((await events(page, 'share')).at(-1).data.method).toBe('native');
-  }
+  await expect(page.locator('.share-dialog .share-support')).not.toBeVisible();
+  await page.locator('.share-dialog [data-share-close]').click();
+  await page.evaluate(() => {
+    const media = window.matchMedia.bind(window);
+    window.matchMedia = (query) => query === '(pointer: coarse)' ? { matches: true } as MediaQueryList : media(query);
+    (window as any).__nativeShares = 0;
+    navigator.share = async () => { (window as any).__nativeShares++; };
+    navigator.clipboard.writeText = async (text) => { (window as any).__writes.push(text); };
+  });
+  await page.locator('#panel [data-control="share"]').click();
+  await copyDialog(page);
+  expect((await events(page, 'share')).slice(-2).map((e: any) => [e.data.method, e.data.outcome]))
+    .toEqual([['clipboard', 'attempt'], ['clipboard', 'copied']]);
+  expect(await page.evaluate(() => (window as any).__nativeShares)).toBe(0);
 });
 
 test('invalid incoming links omit simulation summaries and do not fragment page URLs', async ({ page }) => {
