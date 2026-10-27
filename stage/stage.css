@@ -262,6 +262,7 @@ body {
 .readerpanel .transport > .sharing { justify-content: flex-start; margin-inline-end: auto; }
 .readerpanel .transport > :is(.view, .people, .sharing) { margin-inline-start: calc(var(--control-width) / 2); }
 .readerpanel .transport button { min-inline-size: var(--control-width); min-block-size: 28px; padding-inline: 2px; font-size: 12px; }
+.readerpanel .transport [data-control='share'] { padding-inline: 5px; }
 .transport .current-model {
   position: absolute;
   inset-inline-start: 0;

@@ -57,11 +57,11 @@ describe('the Play panel', () => {
     const { root, panel, button, knob } = mount(s);
     for (const text of ['Play', 'Slower', 'Fast forward', 'One round', 'Start again', 'New luck', 'Wander', 'In the box', 'Line up', 'CCDF', 'Effective number', 'Lorenz', 'Be born', 'Share', 'Embed', 'Animation: Pieces']) expect(button(text), text).toBeTruthy();
     // icons where clear (owner, 2026-10-22), their word on hover and to screen readers; words where not
-    for (const text of ['Play', 'Slower', 'Fast forward', 'One round', 'Start again', 'New luck', 'Wander', 'In the box', 'Line up', 'CCDF', 'Effective number', 'Lorenz', 'Share', 'Embed']) {
+    for (const text of ['Play', 'Slower', 'Fast forward', 'One round', 'Start again', 'New luck', 'Wander', 'In the box', 'Line up', 'CCDF', 'Effective number', 'Lorenz', 'Embed']) {
       expect(button(text).querySelector('svg'), text).not.toBeNull();
       expect(button(text).title, text).toMatch(new RegExp(`^${text}`));
     }
-    expect(button('Be born').querySelector('svg')).toBeNull();
+    for (const text of ['Be born', 'Share']) expect(button(text).querySelector('svg')).toBeNull();
     for (const name of ['squares', 'stake', 'tax']) expect(knob(name), name).toBeTruthy();
     expect(root.querySelector('[data-knob="Speed"]')).toBeNull();
     expect(root.querySelector('.number span')?.textContent).toBe('Gini');

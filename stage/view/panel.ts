@@ -397,7 +397,6 @@ export class Panel {
     const embed = this.control(WORDS.panel.embed, WORDS.panel.embedTip, () => this.embed(embed), 'share', this.sharing, 'embed');
     wear(embed, 'embed', WORDS.panel.embed, WORDS.panel.embedTip);
     const share = this.control(WORDS.panel.share, WORDS.panel.shareTip, () => this.send(share, -1), 'share', this.sharing, 'share');
-    wear(share, 'share', WORDS.panel.share, WORDS.panel.shareTip);
     // how much is shown moving (owner, 2026-10-22): coins, pieces, or nothing, one button that steps through them
     // (its icon the one chosen), kept through a new yard
     this.levelButton = this.control(WORDS.panel.level, '', () => this.setLevel(LEVELS[(LEVELS.indexOf(this.level) + 1) % LEVELS.length]), 'level', this.bar, 'level');
