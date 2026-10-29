@@ -13,10 +13,10 @@ Promotional links may also add `campaign_id`, taken from an eight-character lowe
 | Event | Properties besides `page` | Counting rule |
 |---|---|---|
 | `entry_choice` | `destination`: `learn`, `play`, `build`, `about` | First destination selected on a fresh landing, once per document. Canvas/keyboard entry and the opening ending in Play count as `play`; later tab changes are navigation. Saved links, embeds, and `?opening=0` bypass the fresh-landing flow. |
-| `navigation` | `destination`, `source` | Subsequent navigation, including menu controls, `byline`, `build_close`, `library_follow`, and links on the prose pages. The first entry choice is not also navigation. Selecting the current view does not count; Play's play/pause action uses engagement. `about_socials` denotes the Follow link. |
+| `navigation` | `destination`, `source` | Subsequent navigation, including menu controls, `byline`, `build_close`, `library_follow`, `shared` (the line over a shared yard: its Learn button), and links on the prose pages. The first entry choice is not also navigation. Selecting the current view does not count; Play's play/pause action uses engagement. `about_socials` denotes the Follow link. |
 | `learn_start` | `run` | Once when a Learn run starts. `run` is an incrementing document-local sequence, not a visitor identifier. Re-entering Learn starts a new run. |
 | `learn_progress` | `run`, `act` | First entry into each act per run. Acts are numbered 1–4; revisiting an act does not count again. |
-| `learn_choice_shown` | `run`, `question`: `prediction` or `yard` | Once for each question per run, on first entry into its beat. |
+| `learn_choice_shown` | `run`, `question`: `prediction`, `photos` or `yard` | Once for each question per run, on first entry into its beat. |
 | `learn_choice` | `run`, `question`, `answer`, `attempt`, `method` plus question-specific properties below | First answer is attempt 1; each changed answer increments it. Duplicate answers, checkpoint restoration, and automatic replay do not count. |
 | `learn_action` | `run`, `action`: `skip_act`, `jump_act`, `help`; `act`, `beat`; `destination_act` for jumps | Each deliberate action. Programmatic checkpoint fallback does not count as an act jump. |
 | `learn_complete` | `run`, `skipped`, `assisted` | Once when the final `open` beat is reached. `skipped` means an act was skipped or jumped forward; `assisted` means “Do it for me” was used. Leaving Learn early is not completion. |
@@ -27,7 +27,7 @@ Promotional links may also add `campaign_id`, taken from an eight-character lowe
 | `build_edited` | — | First changed, valid manual program edit per document. Invalid edits, initial editor loading, Library selection, and shared-program restoration do not count. |
 | `model_selected` | `model` | Each enabled Library selection, using its stable preset ID. Disabled/hidden models cannot count. |
 
-Prediction answers are `left`, `same`, or `right`. They include `left_share` and `right_share`, each player's fraction of all wealth at the time of answering, on the same basis as the simulation's other wealth shares. `method` is `manual` or `assisted`.
+Photos answers are `take` (Act 3) or `skip` (straight to Act 4, the yard as it is); they have `method: manual`, and taking the offered skip does not set `learn_complete`'s `skipped`. Prediction answers are `left`, `same`, or `right`; a picked prediction stays on screen for a moment, then the story goes on by itself, so revisions are rarer than before 2026-10-29. They include `left_share` and `right_share`, each player's fraction of all wealth at the time of answering, on the same basis as the simulation's other wealth shares. `method` is `manual` or `assisted`.
 
 Yard answers always have `method: manual`. `answer` and `yard_id` identify the rule set, e.g. `stake_0.3_tax_0.01`; `stake` and `tax` are numerical fractions, not percentages. `position` is the displayed yard number (1–3), independent of the rule identity. The simulation summary comes from that yard's live session. A return to the question permits a different manual answer and counts it as a revision. Assistance is hidden and guarded both in the runner and widget, and Next cannot bypass the choice. All available yards have the same static 2px gold outline, with stronger hover/focus feedback.
 

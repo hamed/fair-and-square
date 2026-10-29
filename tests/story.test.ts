@@ -11,7 +11,7 @@ import { YARDS, shuffle, yardSession } from '../stage/story/yards.ts';
 import { strip, unstrip } from '../stage/story/program.ts';
 import { stageProgram } from '../stage/core/game.ts';
 import { validate } from '../model/validate.ts';
-import { NEFF_ACT2, NEFF_PHOTO } from '../stage/story/beats.ts';
+import { NEFF_ACT2, NEFF_LAPSE, NEFF_PHOTO } from '../stage/story/beats.ts';
 import { compile, stripOf, BOX } from '../stage/core/figure.ts';
 import { prints } from '../stage/acts/prints.ts';
 import { parseRecipe, PRESETS } from '../stage/core/recipe.ts';
@@ -77,7 +77,7 @@ describe('the story, as data', () => {
     expect(keys.size).toBe(BEATS.length);
     for (const b of BEATS) expect(STORY.beats[b.key]).toBeTruthy();
     expect(Object.keys(STORY.beats).sort()).toEqual([...keys].sort());
-    expect(ACT_STARTS).toEqual([0, 14, 24, 42]);
+    expect(ACT_STARTS).toEqual([0, 14, 28, 46]);
     expect(STORY.acts).toHaveLength(ACT_STARTS.length);
     // every line starts with a word the console knows (the full run below checks they all run)
     const s = new Session({ n: 16 });
@@ -94,7 +94,7 @@ describe('the story, as data', () => {
     expect(fill('a **yard**', s)).toBe('a <strong>yard</strong>');
   });
 
-  it('the luck: the first seed where, the players starting unequal, one leads their duels, and Act 2 comes to its N_eff', () => {
+  it('the luck: the first seed where, the players starting unequal, one leads their duels, and Act 2 comes to its N_eff and fast-forwards to one square holding most', () => {
     const ok = (seed: number) => {
       const g = new Game(4, seed, { beta: 0.1, tax: 0 });
       // Act 1 leaves them unequal: the left one (player 0) with SPLIT of the two's money
@@ -116,7 +116,11 @@ describe('the story, as data', () => {
       g.round(7);
       let r = 7;
       while (neff() > NEFF_ACT2 && r < 400) (g.round(1), r++);
-      return r >= 12 && r < 400;
+      if (!(r >= 12 && r < 400)) return false;
+      // the fast-forward: a few seconds at fifty rounds a second, to one square with three quarters of the money or more
+      while (neff() > NEFF_LAPSE && r < 400) (g.round(1), r++);
+      const total = g.wealth.reduce((a, b) => a + b, 0);
+      return r < 400 && Math.max(...g.wealth) / total >= 0.75;
     };
     expect(ok(SEED)).toBe(true);
     for (let s = 1; s < SEED; s++) expect(ok(s)).toBe(false);
@@ -134,7 +138,8 @@ describe('the runner', () => {
       seen.push(r.beat!.key);
       // a reader in a hurry: Next while it plays finishes it
       if (r.playing) r.next();
-      if (!r.done) { if (r.beat?.wait?.kind === 'pick') widgets.pick(); else r.showMe(); }
+      // the photos taken: every beat is seen
+      if (!r.done) { if (r.beat?.wait?.kind === 'pick') widgets.pick(); else if (r.beat?.wait?.kind === 'fork') r.fork('on'); else r.showMe(); }
       settle(r, host);
       // a shown drag sweeps the line for a moment
       for (let t = 0; !r.done && t < 3; t += 1 / 30) {
@@ -246,7 +251,8 @@ describe('the runner', () => {
     expect(host.s.duels).toBe(7);
     r.next();
     settle(r, host);
-    expect(host.s.duels).toBe(19);
+    // on to the DUELS the luck was chosen for
+    expect(host.s.duels).toBe(DUELS);
     r.back();
     expect(r.beat!.key).toBe('see');
     // from its checkpoint (one duel in the log), its first duel already begun
@@ -718,7 +724,7 @@ describe('owner, 2026-10-21: glitches going back and forth', () => {
     };
     for (let guard = 0; guard < 400 && !(r.last && r.ready); guard++) {
       if (r.playing) r.next();
-      else if (!r.done) { if (r.beat?.wait?.kind === 'pick') fake.pick(); else r.showMe(); }
+      else if (!r.done) { if (r.beat?.wait?.kind === 'pick') fake.pick(); else if (r.beat?.wait?.kind === 'fork') r.fork('on'); else r.showMe(); }
       else r.next();
       frames(3);
     }
@@ -740,6 +746,57 @@ describe('owner, 2026-10-21: glitches going back and forth', () => {
       }
       expect(errors()).toEqual([]);
       frames(2);
+    }
+  });
+});
+
+describe('review 2026-10-29: the photos as a choice, and the fast-forward', () => {
+  /** A reader who goes on through whatever a beat waits for (taking the photos at a fork), until `key`. */
+  const until = (r: StoryRunner, host: { s: Session }, fake: ReturnType<typeof fakeWidgets>, key: string) => {
+    for (let guard = 0; guard < 400 && r.beat?.key !== key; guard++) {
+      if (r.playing) r.next();
+      else if (!r.done) { if (r.beat?.wait?.kind === 'pick') fake.pick(); else if (r.beat?.wait?.kind === 'fork') r.fork('on'); else r.showMe(); }
+      else r.next();
+      for (let j = 0; j < 3; j++) {
+        host.s.frame(1 / 30);
+        r.frame(1 / 30);
+      }
+    }
+    expect(r.beat?.key).toBe(key);
+  };
+
+  it('skipped, Back returns to the choice; taken after all, Back goes beat by beat again', () => {
+    const { host, h } = page();
+    const fake = fakeWidgets();
+    const r = new StoryRunner(h, fake.widgets);
+    r.start(BEATS.findIndex((b) => b.key === 'photo'));
+    settle(r, host);
+    r.fork('skip');
+    expect(r.beat?.key).toBe('again');
+    r.back();
+    expect(r.beat?.key).toBe('photo');
+    settle(r, host);
+    r.fork('on');
+    expect(r.beat?.key).toBe('bars');
+    until(r, host, fake, 'again');
+    r.back();
+    expect(r.beat?.key).toBe('gini');
+  });
+
+  it('left mid-fast-forward, or jumped from it, the trading rate goes back', () => {
+    for (const away of ['leave', 'jump'] as const) {
+      const { host, h } = page();
+      const r = new StoryRunner(h);
+      r.start(BEATS.findIndex((b) => b.key === 'lapse'));
+      for (let k = 0; k < 30 && host.s.rate === null; k++) {
+        host.s.frame(1 / 30);
+        r.frame(1 / 30);
+      }
+      expect(host.s.rate).toBe(100);
+      expect(r.playing).toBe(true);
+      if (away === 'leave') r.leave();
+      else r.enterAct(0);
+      expect(host.s.rate, away).toBeNull();
     }
   });
 });

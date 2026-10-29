@@ -1,7 +1,9 @@
 /**
  * The Story's words, English. Every subtitle is keyed by its beat (beats.ts says what each beat does; this file
  * says what it says), so a translation swaps this file and keeps the beats. Words in braces are filled in from
- * the running yard: {gini}, {ginimax} (the most it can be with these squares: (N − 1)/N), {neff}, {n}, {stake}, {tax}. **Bold** marks a new word the first time it appears.
+ * the running yard: {gini}, {ginimax} (the most it can be with these squares: (N − 1)/N), {neff}, {n}, {stake}, {tax},
+ * {ratio} (the richer player's money over the poorer's), {top} (the richest square's share of all the money), and
+ * {lose}, {back} (100 after one loss at the stake, then after one win). **Bold** marks a new word the first time it appears.
  * A line break (\n) splits the words in two: the second part comes after a pause, or once the reader has acted.
  *
  * Drafts, from the story script (docs/story-spec.md), changed only where the owner changed the picture (four
@@ -29,13 +31,17 @@ export const STORY = {
     guess: 'What happens if they keep trading?',
     see: "Let's see.",
     honest: 'The coin is fair,\nand nobody cheats.',
+    gap: 'Yet the gap grows:\none now has {ratio} times as much as the other.',
     invite: 'Now the other two jump in.',
     pairs: 'Each **round**, they pair up at random.',
     together: 'Every pair trades at the same time.',
     rounds: 'Round after round.',
     stand: 'Walking takes too long. From now on, they trade from where they stand.',
     keep: 'They keep trading.',
-    photo: 'Stop. Time for a photo.',
+    lapse: "Let's fast-forward.",
+    most: 'Same coin, same rules. Nobody cheated.\nOne square now has {top} of all the money.',
+    why: 'Why? The poorer one stakes a share of its own money.\nLose {stake}, then win {stake}: 100 → {lose} → {back}.',
+    photo: 'Stop. A photo, to measure the gap?',
     // Act 3: photos
     bars: 'Everyone becomes a bar of the same height.\nThe more money, the longer the bar.',
     stack: 'Now stack them, all touching the left wall.',
@@ -54,7 +60,7 @@ export const STORY = {
     even: 'If everyone had the same, the stairs would follow this straight line.',
     triangle: 'Take the area under the straight line.',
     between: 'Now take the area between the two lines.',
-    gini: 'The second over the first: the **Gini**, {gini}.\n0 when all are equal; {ginimax} when one has it all.',
+    gini: 'The second over the first: the **Gini**, {gini}.\n0 when all are equal; with {n} squares, {ginimax} when one has it all.',
     // Act 4: tax, the veil, and blocks
     again: 'Spread out again, and keep trading.',
     tax: "Let's add a **tax**.\nEach round, every square pays a share of its money into the **pot**.",
@@ -87,6 +93,9 @@ export const STORY = {
     next: 'Next',
     back: 'Back',
     skip: 'Skip act',
+    /** The photo's two ways on (Act 2's end): take the photos (Act 3), or go on to the tax (Act 4). Drafts. */
+    photos: 'Take the photos',
+    skipPhotos: 'Skip to tax',
     /** The reader's step done for them (owner, 2026-10-21: "Show me" was confusing). */
     showMe: 'Do it for me',
     play: 'Play',

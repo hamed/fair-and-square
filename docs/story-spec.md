@@ -326,3 +326,49 @@ its whole name. The running total and the Gini in single steps with matching wor
 shares, the same in the yard and the panel. The pot squares up. 4·10, 4·12, 4·17–4·19 removed; the reader must
 choose a yard; a lottery picks who you are and opens your card. Play: turnover, CCDF trades, no coins after Learn,
 wait for formations, the yard never resizing.
+
+## Review 2026-10-29: first visits (drafts, Hamed's to reword or undo)
+
+Umami (to 2026-10-29): 255 Learn runs, 32 completed; 386 skips, jumps and "Do it for me"; at least a third of runs
+never reached the guess; about 10 shares and no shared link opened. A cold walk-through found that the story never
+showed what the cover promises (one square ends up with almost everything): Act 2 stopped at Gini 0.27 with four
+squares, Play opened paused, and a shared link opened onto a still yard with nothing said.
+
+- **The guess** goes on by itself 1.2 s after a pick (`linger`): the pick is seen to land, and is not clicked again.
+- **The duels** run to the 31 (DUELS) the seed was chosen for; then **gap** says what they did, in the players'
+  own numbers: "one now has 6.7 times as much as the other".
+- **Fast-forward** (`lapse`): after "They keep trading", the round counted, fifty rounds a second, until N_eff 1.5
+  (round 176: one square with 81% of the money). **most** says so; **why** gives the reason in numbers (lose 10%,
+  then win 10%: 100 → 90 → 99). Act 3 and Act 4 entered directly start from there too (`unequal`).
+- **The photos are a choice**: "Stop. A photo, to measure the gap?" with *Take the photos* (Act 3) or *Skip to
+  tax* (Act 4, the yard as it is). Back from Act 4's first beat returns to the choice.
+- **The Gini's words** say why its most is not 1: "with 4 squares, 0.75 when one has it all".
+- **A levy** no longer waits for a square too big to stand clear of the pot's spot anywhere in the room.
+- **The cover**: Learn glows while the logo holds; its words, below, became one square of prose.
+- **Play** from the cover starts trading after the two-second hold; eight seconds on, Fast forward glows (any
+  glowing button stops glowing when pressed).
+- **Sharing**: the yard's line gives a yardstick ("the richest of 16 squares has 21% of the money: 3.4 times an
+  equal share"; a square's: "an equal share is 6.3%"). A yard opened from a Share link shows that line over the
+  yard, plays its history again from round 0 (about six seconds, the round counted), then is the yard as shared;
+  a press or a key meanwhile goes straight there. Its buttons: *Watch it again*, *How? Learn*, and close.
+- **The console's ›_** shows only on localhost or with `?console`; the backtick still opens it.
+
+Feedback the same day (a reader, in Persian): "very cool, gets the idea across; it just needs to say at the start
+what it is about: at first it is hard to tell what it wants to talk about. A short paragraph might solve it."
+
+- **The cover's words** (owner, 2026-10-29: no big text at Learn's start; instead, on the cover, the four lines
+  replaced by a square of justified words): beside the menu, as tall as its four rows (below the logo when upright
+  or narrow), the lettering as large as the square holds. Its words (owner's): "A game about money and inequality. Each
+  square is a person; its size is its money. They trade, and every trade is fair. You make the rules: how much they
+  bet, how much tax they pay. Find a world you’d want to live in, then share it." Learn starts with "This is a
+  yard." as before.
+
+Code review the same day (review/2026-10-29.md), four P2 findings, fixed:
+
+- A replay plays on through a program's `pause`, as whoever shared it did; one that cannot go on (the program
+  ended, or waits) ends at once on the shared yard.
+- The shared line opens the walls up by its height (`headroom`), so charts stand clear of it as well as the room;
+  on a phone the line and its buttons are smaller.
+- *Take the photos* after a skip forgets the skip: Back from Tax goes to the Gini again.
+- A beat's lines cut short (leaving Learn, Back, an act jumped to) give back the trading rate the beat began with:
+  the fast-forward's rate stays in Learn.

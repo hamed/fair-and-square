@@ -989,13 +989,17 @@ function shareText(x: number): string {
  * What a shared yard says ahead of its link: square `i`'s place (yours, if you are it), or with -1 the richest's
  * share; at round 0, that all start equal. Only the yard's own numbers (docs/brand.md: nothing invented).
  */
-export function sharedLine(s: Session, i: number): string {
+export function sharedLine(s: Session, i: number, tagged = true): string {
   const W = WORDS.panel.said;
   const round = s.game.run.round;
-  const tag = ` ${W.tag}`;
+  const tag = tagged ? ` ${W.tag}` : '';
   if (round <= 0) return W.start + tag;
-  const fill = (t: string, r: { rank: number; n: number; share: number }) =>
-    t.replace('{rounds}', round === 1 ? W.round : W.rounds.replace('{k}', String(round))).replace('{rank}', String(r.rank)).replace('{n}', String(r.n)).replace('{share}', shareText(r.share)).replace('{top}', shareText(r.share));
+  const fill = (t: string, r: { rank: number; n: number; share: number }) => {
+    const times = r.share * r.n;
+    return t.replace('{rounds}', round === 1 ? W.round : W.rounds.replace('{k}', String(round))).replace('{rank}', String(r.rank)).replace('{n}', String(r.n))
+      .replace('{share}', shareText(r.share)).replace('{top}', shareText(r.share)).replace('{equal}', shareText(1 / Math.max(1, r.n)))
+      .replace('{times}', times >= 10 ? times.toFixed(0) : times.toFixed(1));
+  };
   const w = s.game.run.world.w;
   let top = 0;
   for (let j = 1; j < w.length; j++) if (w[j] > w[top]) top = j;

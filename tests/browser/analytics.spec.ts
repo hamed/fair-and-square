@@ -298,6 +298,8 @@ test('clipboard yard, square and embed shares preserve replay and do not add pag
   // New and old untagged links replay exactly, while attribution is recorded once per document.
   for (const source of ['yard', 'unknown']) {
     await open(page, `${url.pathname}${source === 'yard' ? url.search : ''}${url.hash}`);
+    // a link the Share button made plays its history again first, then is the yard it was
+    await page.waitForFunction(() => !(window as any).fns.replaying());
     expect(await state(page)).toEqual(before);
     expect((await events(page, 'shared_link_open')).map((e: any) => [e.data.source, e.data.status])).toEqual([[source, 'loaded']]);
     expect((await events(page, 'shared_link_open'))[0].data.sim_stake).toBe(0.3);

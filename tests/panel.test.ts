@@ -313,7 +313,7 @@ describe('the Play panel', () => {
     const w = s.game.run.world.w;
     const top = w.indexOf(Math.max(...w));
     const pct = (x: number) => (Math.abs(x) >= 0.1 ? `${Math.round(100 * x)}%` : `${+(100 * x).toFixed(1)}%`);
-    expect(sharedLine(s, -1)).toContain(`After 40 rounds, the richest square has ${pct(s.rankOf(top)!.share)} of the money.`);
+    expect(sharedLine(s, -1)).toContain(`After 40 rounds, the richest of 16 squares has ${pct(s.rankOf(top)!.share)} of the money: ${(16 * s.rankOf(top)!.share).toFixed(1)} times an equal share.`);
     const r = s.rankOf(3)!;
     expect(sharedLine(s, 3)).toContain(`square #${r.rank} of 16 has ${pct(r.share)}`);
     s.run('be 3');

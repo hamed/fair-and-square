@@ -26,6 +26,8 @@ export type Wait =
   | { readonly kind: 'split' }
   /** A widget's pick (the four yards). */
   | { readonly kind: 'pick' }
+  /** One of the strip's two ways on (`controls.fork`): the next act, or past it. */
+  | { readonly kind: 'fork' }
   /** A panel button pressed (Be a square: a new you). */
   | { readonly kind: 'press'; readonly name: string }
   /** The program edited (the blocks). */
@@ -53,6 +55,8 @@ interface Controls {
   readonly only?: boolean;
   /** The picked square's card, as Play has it (you, once drawn). */
   readonly card?: boolean;
+  /** Two ways on, as buttons under the words: the next act, or past it to the one after (an act to take or skip). */
+  readonly fork?: boolean;
 }
 
 /** Where a beat's words go: across the yard's top (default), or its top-left quarter (the rest a widget's). */
@@ -74,6 +78,8 @@ export interface Beat {
   readonly continues?: boolean;
   /** The reader must do it: Do it for me is never offered. */
   readonly must?: boolean;
+  /** An `auto` beat met by the reader stays this many seconds before it goes on: what they did is seen to land. */
+  readonly linger?: number;
 }
 
 /** A slider within this share of its range of its mark snaps to it. */
@@ -104,11 +110,19 @@ const TAX_START = 0.15;
 const shown = 'fx trade piece; fx tax on';
 /** `k` duels between the players, each shown whole, one after another. */
 const duels = (k: number) => Array.from({ length: k }, () => 'duel 0 1; until done').join('; ');
-/** N_eff where Act 2 stops (the photo's, a little lower, comes after a little more trading in the box). */
+/** N_eff where Act 2's watched trading stops. */
 export const NEFF_ACT2 = 3.05;
-export const NEFF_PHOTO = 2.95;
-/** The yard as the players' duels leave it (DUELS of them), then everyone trading as Act 2 has them. */
-const unequal = `${four(0.1)}; meet 0 1; split ${SPLIT}; duel 0 1 ${DUELS}; meet off; room; play; until round 7; play; until neff ${NEFF_ACT2}`;
+/**
+ * N_eff where Act 2's fast-forward stops: one of the four holds about four fifths of the money, the yard-sale's
+ * end in sight (review 2026-10-29: the story never showed it). The photo's, a little lower, comes after a little
+ * more trading in the box.
+ */
+export const NEFF_LAPSE = 1.5;
+export const NEFF_PHOTO = 1.45;
+/** The fast-forward's pace, trades a second: with four squares, fifty rounds a second. */
+const LAPSE_RATE = 100;
+/** The yard as the players' duels leave it (DUELS of them), then everyone trading as Act 2 has them, fast-forward and all. */
+const unequal = `${four(0.1)}; meet 0 1; split ${SPLIT}; duel 0 1 ${DUELS}; meet off; room; play; until round 7; play; until neff ${NEFF_ACT2}; play; until neff ${NEFF_LAPSE}`;
 
 export const BEATS: readonly Beat[] = [
   // ——— Act 1: two squares (and two watching) ———
@@ -139,17 +153,30 @@ export const BEATS: readonly Beat[] = [
     enter: `${clean}; fx trade toss; fx tax off; ${four(0.1)}; room; meet 0 1; split ${SPLIT}; duel 0 1; finish; veil off`,
     controls: { choices: ['left', 'same', 'right'] },
     wait: { kind: 'choose' },
+    // picked, on by itself after a moment (review 2026-10-29: a pick that changed nothing on screen was clicked again)
+    auto: true,
+    linger: 1.2,
   },
   // a few whole trades, coin and all, quicker each time
   { key: 'see', act: 1, run: `speed 1; ${duels(3)}; speed 1.5; ${duels(3)}` },
-  { key: 'honest', act: 1, run: `speed 2; ${duels(6)}; speed 3; ${duels(6)}` },
+  // then on, quicker, to the DUELS the luck was chosen for (Act 1's one, Let's see's six, these twelve, the rest): one
+  // leads from the LEAD_FROM-th to the last
+  { key: 'honest', act: 1, run: `speed 2; ${duels(6)}; speed 3; ${duels(6)}; speed 4; ${duels(DUELS - 1 - 6 - 12)}` },
+  // what the duels did, in the players' own numbers (review 2026-10-29: the guess was never answered)
+  { key: 'gap', act: 1, run: 'speed 1; face richest cheer 2' },
   { key: 'invite', act: 1, run: 'meet off; face 2 cheer; face 3 cheer; room; until done' },
   { key: 'pairs', act: 1, run: 'meet; until done' },
   { key: 'together', act: 1, run: 'round; until done' },
   { key: 'rounds', act: 1, run: 'speed 1.5; play; until round +3; speed 1' },
   { key: 'stand', act: 1, run: 'until done; fx trade piece; room; until done; play; until round +3' },
   { key: 'keep', act: 1, run: `speed 2; play; until round +4; speed 3; play; until neff ${NEFF_ACT2}; speed 1` },
-  { key: 'photo', act: 1, run: 'until done; face all camera 4; wait 1' },
+  // the end in sight (review 2026-10-29): rounds counted, trades at once, until one holds about four fifths
+  { key: 'lapse', act: 1, run: `until done; fx trade off; badge round on; play ${LAPSE_RATE}; until neff ${NEFF_LAPSE}; play auto; pause; fx trade piece` },
+  { key: 'most', act: 1, run: 'face richest cheer 3' },
+  // why, in numbers: the poorer one's stake is a share of its own money, so a loss and a win leave it lower
+  { key: 'why', act: 1 },
+  // the photos are a choice (review 2026-10-29: Act 3 lost most readers): take them, or go on to the tax
+  { key: 'photo', act: 1, run: 'until done; badge off; face all camera 4; wait 1', controls: { fork: true }, wait: { kind: 'fork' }, must: true },
 
   // ——— Act 3: photos ———
   { key: 'bars', act: 2, enter: `${clean}; fx trade off; fx tax off; ${unequal}; finish; veil off`, run: 'fx trade off; logarea bar; until done' },

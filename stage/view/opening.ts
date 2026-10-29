@@ -892,7 +892,9 @@ export class Opening {
         return a < 0.5 ? null : box;
       }
       const from = logo[k];
-      return drawButton(ctx, type, k, at(lerp(BOX + from.x, end.x, move), lerp(BOX + from.y, end.y, move), from.h * (end.h / from.h) ** move), 1, false, h.onWall ? move : 0, h.onWall && BUTTONS[k].id === this.current);
+      // while the logo holds, Learn glows: where a first visit starts (review 2026-10-29: four doors, none said so)
+      const first = !this.started && BUTTONS[k].id === 'story';
+      return drawButton(ctx, type, k, at(lerp(BOX + from.x, end.x, move), lerp(BOX + from.y, end.y, move), from.h * (end.h / from.h) ** move), 1, false, h.onWall ? move : 0, h.onWall && BUTTONS[k].id === this.current, first);
     });
   }
 

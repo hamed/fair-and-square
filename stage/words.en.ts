@@ -7,6 +7,16 @@ export const WORDS = {
   tabs: { story: 'Learn', play: 'Play', rules: 'Build', finds: 'Finds', about: 'About' },
   /** A shared yard's corner, when its link says who built it. */
   credit: 'This yard was built by {by}',
+  /**
+   * Over a yard opened from a shared link (review 2026-10-29: a link opened onto a still yard and a panel, nothing
+   * said): its line (panel.said, without the tag), its history played again from round 0, and the ways on. Drafts.
+   */
+  shared: {
+    label: 'A shared yard',
+    replay: 'Watch it again',
+    learn: 'How? Learn ›',
+    close: 'Close',
+  },
   /** The card over the square you are (`be`): your rank (1 = the richest), of N, and your share of all the money. */
   you: '#{rank} of {n} · {share}',
   /** The panel's charts: compact visible labels, technical definitions in tooltips, and hover readouts. */
@@ -123,9 +133,11 @@ export const WORDS = {
      */
     said: {
       start: 'Same coin, same rules, nobody cheats. Everyone starts equal. Watch where the money goes.',
-      yard: 'Same coin, same rules, nobody cheats. After {rounds}, the richest square has {top} of the money.',
-      square: 'Same coin, same rules, nobody cheats. After {rounds}, square #{rank} of {n} has {share} of the money.',
-      you: 'Same coin, same rules, nobody cheats. After {rounds}, I am square #{rank} of {n}, with {share} of the money.',
+      // with a yardstick (review 2026-10-29: "21%" alone said nothing): {times}, the richest's share over an equal
+      // share; {equal}, an equal share (1/n)
+      yard: 'Same coin, same rules, nobody cheats. After {rounds}, the richest of {n} squares has {top} of the money: {times} times an equal share.',
+      square: 'Same coin, same rules, nobody cheats. After {rounds}, square #{rank} of {n} has {share} of the money; an equal share is {equal}.',
+      you: 'Same coin, same rules, nobody cheats. After {rounds}, I am square #{rank} of {n}, with {share} of the money; an equal share is {equal}.',
       rounds: '{k} rounds',
       round: '1 round',
       tag: '#FairAndSquare',

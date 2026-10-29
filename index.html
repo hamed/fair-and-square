@@ -94,13 +94,19 @@
       <a id="byline" class="byline" href="./about.html" target="_blank" rel="noopener" hidden>Hamed Seyed-Allaei</a>
       <a id="support-link" class="support-link" target="_blank" rel="noopener" hidden>support ♥</a>
       <div id="cover-copy" class="cover-copy" hidden>
-        <p>Everyone starts equal.</p>
-        <p>Every trade is fair.</p>
-        <p>What happens next?</p>
-        <p>Build your own fair world.</p>
+        <p>A game about money and inequality. Each square is a person; its size is its money. They trade, and every trade is fair. You make the rules: how much they bet, how much tax they pay. Find a world you’d want to live in, then share it.</p>
       </div>
       <!-- inside the yard, top right: who built a shared yard (a link's `by`), else nothing -->
       <a id="credit" class="credit" target="_blank" rel="noopener nofollow" hidden></a>
+      <!-- over a shared yard: what it shows, in its own numbers, and the ways on; its words come from stage/words.en.ts -->
+      <aside id="shared" class="shared" hidden>
+        <p class="shared-said"></p>
+        <div class="shared-ways">
+          <button type="button" data-shared="replay"></button>
+          <button type="button" data-shared="learn" data-track-nav="learn" data-track-source="shared"></button>
+          <button type="button" data-shared="close" class="shared-close"></button>
+        </div>
+      </aside>
       <section id="story" class="strip" aria-label="Learn" hidden></section>
       <canvas id="stage" aria-label="The yard"></canvas>
       <output id="hud" class="hud"></output>

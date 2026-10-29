@@ -221,10 +221,10 @@ export const COMMANDS: Readonly<Record<string, Command>> = {
     },
   },
   play: {
-    usage: 'play [rate]',
-    help: 'trade continuously, <rate> trades a second (default N)',
+    usage: 'play [rate|auto]',
+    help: 'trade continuously, <rate> trades a second (default N; auto: back to N)',
     run(s, [arg]) {
-      if (arg !== undefined) s.rate = checkRate(Number(arg));
+      if (arg !== undefined) s.rate = arg === 'auto' ? null : checkRate(Number(arg));
       s.playing = true;
       return `playing, ${s.tradeRate} trades/s`;
     },

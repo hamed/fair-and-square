@@ -185,7 +185,15 @@ export class Strip {
         this.choices.push(choice);
       }
     }
-    this.guess.hidden = !this.choices.length;
+    if (c?.fork) {
+      // two ways on, in words: the next act, or past it
+      const on = button('fork', () => this.runner()?.fork('on'));
+      on.textContent = STORY.ui.photos;
+      const skip = button('fork', () => this.runner()?.fork('skip'));
+      skip.textContent = STORY.ui.skipPhotos;
+      this.guess.append(on, skip);
+    }
+    this.guess.hidden = !this.guess.childElementCount;
     if (c?.line) {
       const label = el('label', 'slider line');
       const span = el('span', 'name');

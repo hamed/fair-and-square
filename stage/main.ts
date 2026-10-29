@@ -23,7 +23,7 @@ import { WORDS } from './words.en.ts';
 import { awaitFonts } from './view/fonts.ts';
 import { keyAction, type KeyTarget, type OpeningState } from './view/keys.ts';
 import { BUTTONS, Opening, castOf, drawHeader, headerAt, headerHeight, measureType, type Box } from './view/opening.ts';
-import { Panel } from './view/panel.ts';
+import { Panel, sharedLine } from './view/panel.ts';
 import { StageView } from './view/render.ts';
 import { RulesDrawer } from './view/rules.ts';
 import { HANDLE_GRIP } from './view/render.ts';
@@ -124,6 +124,77 @@ if (location.hash.length > 1 || search.has('fs_share')) trackOnce('shared_link_o
   ...(!loadError && location.hash.length > 1 ? simulationSummary(session) : {}),
 });
 
+// ——— a shared yard (review 2026-10-29: a link opened onto a still yard and a panel, nothing said): its line over
+// it, in its own numbers; a link the Share button made plays its history again, from everyone equal; and the ways on
+
+const shared = $<HTMLElement>('shared');
+const sharedSaid = shared.querySelector<HTMLElement>('.shared-said')!;
+shared.setAttribute('aria-label', WORDS.shared.label);
+for (const b of shared.querySelectorAll<HTMLButtonElement>('[data-shared]')) {
+  const way = b.dataset.shared as 'replay' | 'learn' | 'close';
+  b.textContent = way === 'close' ? '×' : WORDS.shared[way];
+  if (way === 'close') b.setAttribute('aria-label', WORDS.shared.close);
+}
+/** The link a yard was opened from (not an embed's): the yard the line over it is about. */
+const sharedHash = !embed && !loadError && location.hash.length > 1 ? location.hash : null;
+/** The line shows until the reader closes it or goes into Learn. */
+let sharedOpen = sharedHash !== null;
+/** About how long a replay takes, seconds, however many rounds; and at least this many rounds a second. */
+const REPLAY_SECONDS = 6;
+const REPLAY_PACE = 4;
+/** A shared yard's history playing again: the session playing it from round 0, and the one the link makes (its end). */
+let replaying: { from: Session; to: Session } | null = null;
+if (sharedHash) sharedSaid.textContent = sharedLine(session, -1, false);
+if (sharedHash && search.has('fs_share')) replayShared(session);
+
+/** The link's history again from round 0, a few seconds long, trades at once and the round counted; then `to`. */
+function replayShared(to = sharedHash ? Session.load(sharedHash) : null): void {
+  if (!sharedHash || !to) return;
+  const round = to.game.run.round;
+  if (round <= 0) return;
+  const p = new URLSearchParams(sharedHash.slice(1));
+  p.delete('at');
+  p.delete('play');
+  const from = Session.load(`#${p.toString()}`);
+  const pace = Math.max(REPLAY_PACE, round / REPLAY_SECONDS) * Math.max(1, Math.floor(from.game.n / 2));
+  from.run('fx trade off; fx tax off; badge round on');
+  from.start('replay', [`play ${Math.min(1e6, pace)}`, `until round ${round}`, 'pause']);
+  from.band = session.band;
+  from.headroom = session.headroom;
+  from.stage.takePlaces(session.stage);
+  from.recompile();
+  session = from;
+  replaying = { from, to };
+}
+
+/** The replay over (played to its end, or the reader took over): the yard as the link has it, nobody jumping. */
+function finishReplay(): void {
+  if (!replaying) return;
+  const { from, to } = replaying;
+  replaying = null;
+  if (session !== from) return;
+  if (from.script?.name === 'replay') from.script = null;
+  to.band = from.band;
+  to.headroom = from.headroom;
+  to.stage.takePlaces(from.stage);
+  to.recompile();
+  session = to;
+}
+// the reader takes over a replay (a press, a key): the yard as the link has it first, then what they did
+for (const type of ['pointerdown', 'keydown'] as const) {
+  document.addEventListener(type, (e) => {
+    if (replaying && !(e.target instanceof Element && e.target.closest('#shared'))) finishReplay();
+  }, true);
+}
+shared.addEventListener('click', (e) => {
+  const way = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-shared]')?.dataset.shared : undefined;
+  if (way === 'replay') {
+    finishReplay();
+    replayShared();
+  } else if (way === 'learn') enterStory();
+  else if (way === 'close') sharedOpen = false;
+});
+
 const view = new StageView(canvas);
 setFavicon();
 // the reader's setting: faces hold still, glows and coins calm down
@@ -208,53 +279,57 @@ function place(el: HTMLElement, box: Box | null): void {
   el.style.height = `${box.y1 - box.y0}px`;
 }
 
-/** Keep the cover's HTML words on its drawn menu rows; below the whole logo if they would be cramped. */
+/**
+ * The cover's words in a square (owner, 2026-10-29): beside the menu, its top on the first row, as tall as the four
+ * rows; below the logo and byline when the page is upright or too narrow. The lettering as large as the square holds.
+ */
 let coverLayout = '';
 function placeCover(): void {
   const cover = opening;
   coverCopy.hidden = !cover || cover.started || cover.done;
   if (!cover || coverCopy.hidden || !cover.coverBounds) { coverLayout = ''; return; }
   const first = cover.controls[0];
-  const second = cover.controls[1];
-  if (!first || !second) return;
+  const last = cover.controls[3];
+  if (!first || !last) return;
   const c = canvas.getBoundingClientRect();
   const width = document.documentElement.clientWidth;
   const height = document.documentElement.clientHeight;
   const bounds = cover.coverBounds;
-  const geometry = [width, height, c.left, c.top, first.x0, first.x1, first.y0, first.y1, bounds.x0, bounds.x1, bounds.y1].join(',');
+  const geometry = [width, height, c.left, c.top, first.x0, first.x1, first.y0, last.y1, bounds.x0, bounds.x1, bounds.y1].join(',');
   if (coverLayout === geometry) return;
   coverLayout = geometry;
-  const row = first.y1 - first.y0;
-  const gap = Math.max(20, row * 0.35);
+  const rows = last.y1 - first.y0;
+  const gap = Math.max(20, (first.y1 - first.y0) * 0.35);
   const left = c.left + first.x1 + gap;
-  const style = coverCopy.style;
-  const logoWidth = bounds.x1 - bounds.x0;
   const available = Math.max(0, width - left - 24);
-  const stacked = height >= width || available < Math.min(240, logoWidth * 0.65);
-  let font = cover.buttonFontSize;
-  coverCopy.classList.toggle('stacked', stacked);
-  style.setProperty('--cover-row', `${row}px`);
-  style.setProperty('--cover-gap', `${second.y0 - first.y1}px`);
-  style.insetInlineStart = `${left}px`;
-  style.insetBlockStart = `${c.top + first.y0}px`;
-  style.inlineSize = `${available}px`;
+  const stacked = height >= width || available < Math.max(200, rows * 0.6);
+  let x = left;
+  let y = c.top + first.y0;
+  let side = Math.min(rows, available);
   if (stacked) {
-    const short = height < 500;
-    const top = c.top + bounds.y1 + (short ? 12 : 20);
-    const lineGap = short ? 4 : 8;
-    const space = Math.max(0, height - top - 40);
-    font = Math.min(font, Math.max(1, (space - 3 * lineGap) / (4 * 1.4)));
-    style.setProperty('--cover-gap', `${lineGap}px`);
-    style.insetInlineStart = `${c.left + bounds.x0}px`;
-    style.insetBlockStart = `${top}px`;
-    style.inlineSize = `${logoWidth}px`;
+    x = c.left + bounds.x0;
+    y = c.top + bounds.y1 + (height < 500 ? 12 : 20);
+    side = Math.max(0, Math.min(bounds.x1 - bounds.x0, height - y - 40));
   }
-  // Fit all four single lines at one size, as large as their width allows, capped at the menu lettering.
-  style.setProperty('--cover-font', `${font}px`);
-  if (coverCopy.scrollWidth > coverCopy.clientWidth) {
-    font = Math.max(1, font * coverCopy.clientWidth / coverCopy.scrollWidth - 0.25);
+  const style = coverCopy.style;
+  style.insetInlineStart = `${x}px`;
+  style.insetBlockStart = `${y}px`;
+  style.inlineSize = style.blockSize = `${side}px`;
+  style.setProperty('--cover-pad', `${Math.max(12, side * 0.06)}px`);
+  // the largest lettering whose words still fit the square (halving the difference a few times)
+  let lo = 8;
+  let hi = Math.max(lo, side / 12);
+  const fits = (font: number) => {
     style.setProperty('--cover-font', `${font}px`);
+    return coverCopy.scrollHeight <= coverCopy.clientHeight + 0.5;
+  };
+  if (fits(hi)) return;
+  for (let k = 0; k < 8; k++) {
+    const mid = (lo + hi) / 2;
+    if (fits(mid)) lo = mid;
+    else hi = mid;
   }
+  style.setProperty('--cover-font', `${lo}px`);
 }
 // Play: beside the held logo it starts the game, while the logo unfolds it skips to the end, and on the line
 // above the yard it plays and pauses the trading. About opens the about page (owner, 2026-10-22: in a new window,
@@ -295,6 +370,8 @@ const host: StoryHost = {
 };
 const strip = new Strip(storyRoot, () => runner);
 function enterStory(): void {
+  sharedOpen = false;
+  finishReplay();
   if (opening || waiting) {
     storyNext = true;
     // the unfolding lands with Learn open, not Play
@@ -343,6 +420,7 @@ const rulesTab = menu[BUTTONS.findIndex((b) => b.id === 'rules')];
 // Rules is a tab like the others: pressed, it is the one you are in (the story, if you were in it, is left)
 rulesTab.addEventListener('click', () => {
   skipOpening();
+  finishReplay();
   if (drawer.isOpen) return;
   leaveStory();
   void drawer.open();
@@ -354,9 +432,13 @@ function tab(): 'play' | 'story' | 'rules' {
 function engage(action: string): void {
   if (mode === 'play' && !drawer.isOpen && !opening && !waiting) trackOnce('play_engaged', { action });
 }
+/** Milliseconds of trading in a fresh Play before fast forward glows. */
+const FAST_HINT_AFTER = 8000;
 document.addEventListener('click', (event) => {
   const control = event.target instanceof Element ? event.target.closest<HTMLElement>('#panel [data-control]') : null;
   const action = control?.dataset.control;
+  // a glowing button, pressed: it has been found
+  if (action) session.glows.delete(`button:${action}`);
   if (action && !['share', 'card-share', 'embed'].includes(action)) engage(action.startsWith('press:') ? 'program_button' : action);
 });
 document.addEventListener('change', (event) => {
@@ -371,7 +453,7 @@ const yardsWidget = new YardsWidget(() => {
 }, SEED, (s, name) => panelView.focus(s, name));
 panelView.preview = (s) => s === session ? sharePreview(canvas, view.floor) : yardsWidget.preview(s);
 
-(window as unknown as { fns: unknown }).fns = { session: () => session, run: (line: string) => runLine(line), editor: () => drawer.blocks, story: () => runner, strip: () => strip, floor: () => ({ ...view.floor }) };
+(window as unknown as { fns: unknown }).fns = { replaying: () => replaying !== null, session: () => session, run: (line: string) => runLine(line), editor: () => drawer.blocks, story: () => runner, strip: () => strip, floor: () => ({ ...view.floor }) };
 
 // ——— console ———
 
@@ -443,6 +525,8 @@ input.addEventListener('keydown', (e) => {
 
 function setConsole(open: boolean): void {
   panel.hidden = !open;
+  // opened by its key, its button stays to close it
+  if (open) toggle.hidden = false;
   toggle.setAttribute('aria-expanded', String(open));
   if (open) input.focus();
 }
@@ -488,7 +572,9 @@ window.addEventListener('keydown', (e) => {
     runLine(`speed ${Math.min(4, Math.max(1 / 16, next))}`);
   }
 });
-// the console is a developer's: closed unless asked for (` or the ›_ button, or ?console=1)
+// the console is a developer's: closed unless asked for (` or the ›_ button, or ?console=1); its button shows only
+// on a developer's machine or with ?console (review 2026-10-29: a stray ›_ on the cover)
+toggle.hidden = !(search.has('console') || ['localhost', '127.0.0.1'].includes(location.hostname));
 setConsole(!embed && search.get('console') === '1');
 
 // ——— pointer ———
@@ -668,7 +754,7 @@ function placeCredit(): void {
   const r = canvas.getBoundingClientRect();
   const f = view.floor;
   credit.style.left = `${r.left + f.right - credit.offsetWidth - 10}px`;
-  credit.style.top = `${r.top + f.top + 8}px`;
+  credit.style.top = `${shared.hidden ? r.top + f.top + 8 : shared.getBoundingClientRect().bottom + 4}px`;
 }
 
 // ——— frame ———
@@ -709,12 +795,18 @@ function frame(now: number): void {
           storyNext = false;
           enterStory();
         } else if (!drawer.isOpen) {
-          // Let the equal squares hold the box for two seconds, then toggle its default formation off.
+          // Let the equal squares hold the box for two seconds, then toggle its default formation off and start
+          // trading (review 2026-10-29: a Play that opened still looked broken). A while later, if the pace is still
+          // the default, fast forward glows: where it is all going.
           const initial = session;
           const recipe = initial.recipe;
           const stage = initial.stage;
           setTimeout(() => {
-            if (mode === 'play' && !drawer.isOpen && session === initial && initial.stage === stage && initial.recipe === recipe && recipe.pose === 'fold') initial.run('room');
+            if (!(mode === 'play' && !drawer.isOpen && session === initial && initial.stage === stage && initial.recipe === recipe && recipe.pose === 'fold')) return;
+            initial.run(initial.playing ? 'room' : 'room; play');
+            setTimeout(() => {
+              if (mode === 'play' && session === initial && initial.playing && initial.rate === null) initial.run('glow button fast');
+            }, FAST_HINT_AFTER);
           }, 2000);
         }
       }
@@ -725,6 +817,10 @@ function frame(now: number): void {
     requestAnimationFrame(frame);
     return;
   }
+  // the program paused on the way (`pause`): the replay plays on, as whoever shared it did; it played to its end, or
+  // stopped short of it (the program ended, or waits): the yard as its link has it
+  if (replaying && session === replaying.from && session.script && !session.playing && session.game.run.status === 'paused') session.playing = true;
+  if (replaying && (session !== replaying.from || !session.script || !session.playing)) finishReplay();
   runner?.frame(dt);
   session.frame(dt);
   if (!document.hidden) {
@@ -781,6 +877,18 @@ function frame(now: number): void {
 renderLog();
 requestAnimationFrame(frame);
 
+/** The shared line has opened the walls up by its height (the session's headroom). */
+let sharedRoom = false;
+/** The room's squares kept under what lies over the yard's top, `top` px of it (the session's band). */
+function keepBand(top: number, scale: number): void {
+  const want: [number, number] = [0, Math.round((YARD - top / Math.max(1, scale)) * 50) / 50];
+  const band = session.band;
+  if (!band || Math.abs(band[0] - want[0]) > 0.03 || Math.abs(band[1] - want[1]) > 0.03) {
+    session.band = want;
+    session.recompile();
+  }
+}
+
 /**
  * The Story's screen: the words (and the guess) over the yard's top; the rest is in the panel, as in Play (it
  * shows what the story has revealed so far). The room keeps its squares under the words (the session's band).
@@ -802,12 +910,29 @@ function placeStory(now: number): void {
     say.height = quarter ? `${(f.bottom - f.top) / 2}px` : '';
     strip.say.classList.toggle('quarter', quarter);
     const words = strip.say.getBoundingClientRect();
-    const scale = Math.max(1, f.scale);
     top = words.height > 0 && !quarter ? words.bottom - (c.top + f.top) + 6 : 0;
-    const want: [number, number] = [0, Math.round((YARD - top / scale) * 50) / 50];
-    const band = session.band;
-    if (!band || Math.abs(band[0] - want[0]) > 0.03 || Math.abs(band[1] - want[1]) > 0.03) {
-      session.band = want;
+    keepBand(top, f.scale);
+    shared.hidden = true;
+  } else {
+    // a shared yard's line across the yard's top: the walls open up by its height, so neither the room nor a chart
+    // stands under it (review 2026-10-29: a band keeps only the room clear)
+    shared.hidden = !(sharedOpen && sharedHash !== null && !drawer.isOpen);
+    if (!shared.hidden) {
+      const style = shared.style;
+      style.left = `${c.left + f.left}px`;
+      style.top = `${c.top + f.top}px`;
+      style.width = `${Math.max(120, f.right - f.left)}px`;
+      const line = shared.getBoundingClientRect();
+      top = line.height > 0 ? line.bottom - (c.top + f.top) + 6 : 0;
+      const want = Math.min(3, Math.round((top / Math.max(1, f.scale)) * 50) / 50);
+      if (Math.abs(session.headroom - want) > 0.03) {
+        session.headroom = want;
+        session.recompile();
+      }
+      sharedRoom = true;
+    } else if (sharedRoom) {
+      sharedRoom = false;
+      session.headroom = 0;
       session.recompile();
     }
   }

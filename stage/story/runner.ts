@@ -86,6 +86,12 @@ export class StoryRunner {
   private readonly answers = new Map<string, { answer: string; attempt: number }>();
   private usedHelp = false;
   private skipped = false;
+  /** Seconds since the beat's wait was met (an `auto` beat's linger). */
+  private sinceMet = 0;
+  /** A fork taken past an act: from that beat to the act after, so Back from there returns to the fork. */
+  private leapt: { readonly from: number; readonly to: number } | null = null;
+  /** The trading rate as the beat began: given back if its lines are cut short (a fast-forward's, review 2026-10-29). */
+  private rateAt: number | null = null;
   private completed = false;
   /** A button's lines running (the strip's Play), not the beat's own. */
 
@@ -134,6 +140,7 @@ export class StoryRunner {
     this.questionsSeen.clear();
     this.answers.clear();
     this.usedHelp = this.skipped = this.completed = false;
+    this.leapt = null;
     this.go(at);
   }
 
@@ -144,6 +151,7 @@ export class StoryRunner {
       this.skipped ||= a > this.act;
       this.emit('learn_action', { action, act: this.act + 1, beat: this.beat?.key ?? '', destination_act: a + 1 });
     }
+    this.leapt = null;
     const k = ACT_STARTS[Math.max(0, Math.min(ACT_STARTS.length - 1, a))];
     const enter = this.beats[k].enter;
     if (enter) {
@@ -203,7 +211,8 @@ export class StoryRunner {
 
   /** ←: the beat before, played again from its checkpoint (an act's first beat entered afresh if there is none). */
   back(): void {
-    let k = this.at - 1;
+    // past a fork's skipped act: back to the fork
+    let k = this.leapt?.to === this.at ? this.leapt.from : this.at - 1;
     // a step of something slow goes back to where that began
     while (k > 0 && this.beats[k].continues) k--;
     if (k < 0) return this.go(Math.max(0, this.at));
@@ -236,7 +245,7 @@ export class StoryRunner {
   leave(): void {
     this.unmount();
     const s = this.host.session();
-    if (s.script?.name === SCRIPT) s.script = null;
+    this.cut(s);
     // what the story held goes on (review 2026-10-21, 1): a levy held at its pot plays on, Play can trade
     s.transit.holdAt = null;
     if (s.goal?.kind === 'levy') s.goal = null;
@@ -289,6 +298,25 @@ export class StoryRunner {
     this.host.session().run('face all curious; face all camera 2');
     if (this.beat.wait?.kind === 'choose') this.satisfy();
     this.touch();
+  }
+
+  /** One of a fork's two ways on: the next act (`on`), or past it to the act after (`skip`). */
+  fork(way: 'on' | 'skip'): void {
+    const b = this.beat;
+    if (!b || b.wait?.kind !== 'fork') return;
+    this.answer('photos', way === 'on' ? 'take' : 'skip', { method: 'manual' });
+    this.satisfy();
+    if (way === 'on') {
+      // taken after all: Back from the act after the skipped one goes back beat by beat again
+      this.leapt = null;
+      if (this.last) return this.end();
+      return this.go(this.at + 1);
+    }
+    const to = ACT_STARTS[b.act + 2];
+    if (to === undefined) return this.end();
+    // the yard goes on as it is: no act's yard is built, as when the reader walks there beat by beat
+    this.leapt = { from: this.at, to };
+    this.go(to);
   }
 
   /** The program was changed in its blocks (a number, or more): what a beat waiting for a change waits for. */
@@ -374,6 +402,7 @@ export class StoryRunner {
     if (b.wait?.kind === 'drag' && !this.met && s.guide?.kind === 'line' && s.guide.moved) this.satisfy();
     if (!this.met) this.watch(b, s);
     this.since += dt;
+    if (this.met) this.sinceMet += dt;
     if (this.playing) return;
     // a slider beat goes on once its slider rests, not while it is dragged through the mark (owner, 2026-10-22)
     if (b.wait?.kind === 'slide') {
@@ -383,7 +412,7 @@ export class StoryRunner {
       this.rest = now === this.seen ? this.rest + dt : 0;
       this.seen = now;
     }
-    if (b.auto && this.done && !this.last && (b.wait?.kind !== 'slide' || this.rest >= REST)) {
+    if (b.auto && this.done && !this.last && (b.wait?.kind !== 'slide' || this.rest >= REST) && (!this.met || this.sinceMet >= (b.linger ?? 0))) {
       this.go(this.at + 1);
       return;
     }
@@ -477,6 +506,7 @@ export class StoryRunner {
   private go(k: number): void {
     const b = this.beats[k];
     if (!b) return;
+    this.cut(this.host.session());
     this.pending = 0;
     this.since = 0;
     this.shown = false;
@@ -489,7 +519,7 @@ export class StoryRunner {
       this.actsSeen.add(b.act);
       this.emit('learn_progress', { act: b.act + 1 });
     }
-    const question = b.wait?.kind === 'choose' ? 'prediction' : b.wait?.kind === 'pick' ? 'yard' : '';
+    const question = b.wait?.kind === 'choose' ? 'prediction' : b.wait?.kind === 'pick' ? 'yard' : b.wait?.kind === 'fork' ? 'photos' : '';
     if (question && !this.questionsSeen.has(question)) {
       this.questionsSeen.add(question);
       this.emit('learn_choice_shown', { question });
@@ -499,6 +529,7 @@ export class StoryRunner {
       this.emit('learn_complete', { skipped: this.skipped, assisted: this.usedHelp });
     }
     this.met = false;
+    this.sinceMet = 0;
     this.offer = false;
     this.idle = 0;
     this.sweep = -1;
@@ -508,6 +539,7 @@ export class StoryRunner {
     this.rest = 0;
     this.splitAt = s.split;
     this.youAt = s.you;
+    this.rateAt = s.rate;
     const knobs = [...(b.controls?.sliders ?? []), ...(b.controls?.program ? ['stake', 'tax'] : [])];
     for (const name of knobs) if (!this.startValues.has(name)) this.startValues.set(name, name === 'tax' ? s.game.rules.tax : s.game.rules.beta);
     // the widget first: it may hand the story another session, which the lines then play on
@@ -518,6 +550,13 @@ export class StoryRunner {
     if (now.script?.name === SCRIPT) now.script = null;
     if (lines.length) now.start(SCRIPT, lines);
     this.touch();
+  }
+
+  /** The beat's lines, if still playing, stop here; a trading rate they set for a while goes back to the beat's start. */
+  private cut(s: Session): void {
+    if (s.script?.name !== SCRIPT) return;
+    s.script = null;
+    s.rate = this.rateAt;
   }
 
   private restore(cp: Checkpoint): void {
@@ -566,6 +605,7 @@ export class StoryRunner {
   private satisfy(): void {
     if (this.met) return;
     this.met = true;
+    this.sinceMet = 0;
     this.offer = false;
     this.touch();
   }
@@ -597,6 +637,21 @@ export class StoryRunner {
 export function fill(words: string, s: Session): string {
   const t = statsOf(s.game.wealth);
   const rules = s.game.rules;
+  const w = s.game.wealth;
+  let total = 0;
+  let top = 0;
+  for (let i = 0; i < w.length; i++) {
+    total += w[i];
+    if (w[i] > w[top]) top = i;
+  }
+  // the two players (the partners named, else the first two): the richer one's money over the poorer one's
+  const pair = s.pairs;
+  const [a, b] = pair && pair.length >= 2 ? [pair[0], pair[1]] : [0, 1];
+  const hi = Math.max(w[a] ?? 0, w[b] ?? 0);
+  const lo = Math.min(w[a] ?? 0, w[b] ?? 0);
+  const ratio = lo > 0 ? hi / lo : Infinity;
+  // 100 after a loss at the stake, then after a win: the poorer one's money, if it stays the poorer
+  const money = (x: number) => String(+x.toFixed(1));
   const values: Record<string, string> = {
     gini: t.gini.toFixed(2),
     // the Gini measured is the gap's share of the triangle: one square with everything fills all but its own step
@@ -605,6 +660,10 @@ export function fill(words: string, s: Session): string {
     n: String(s.game.n),
     stake: share(rules.beta),
     tax: share(rules.tax),
+    ratio: Number.isFinite(ratio) ? (ratio >= 10 ? ratio.toFixed(0) : ratio.toFixed(1)) : '∞',
+    top: share(total > 0 ? w[top] / total : 0),
+    lose: money(100 * (1 - rules.beta)),
+    back: money(100 * (1 - rules.beta) * (1 + rules.beta)),
   };
   const escaped = words.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
   return escaped.replace(/\{(\w+)\}/g, (m, k: string) => values[k] ?? m).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');

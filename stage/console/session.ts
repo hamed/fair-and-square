@@ -693,6 +693,8 @@ export class Session {
     const cx = st.wallGoal.right / 2;
     const cy = st.wallGoal.top / 2;
     for (let i = 0; i < st.n; i++) {
+      // one too big to stand clear of the spot anywhere in the room cannot make way: it is not waited for
+      if (st.w[i] > cx - half && st.h[i] > cy - half) continue;
       if (Math.abs(st.x[i] + st.w[i] / 2 - cx) < st.w[i] / 2 + half && Math.abs(st.y[i] + st.h[i] / 2 - cy) < st.h[i] / 2 + half) return true;
     }
     return false;

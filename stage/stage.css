@@ -64,38 +64,35 @@ body {
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* The cover's four lines: beside its menu rows, or together below the logo and byline when room is tight. */
+/* The cover's words (owner, 2026-10-29): what the game is about, justified in a square beside the menu, as tall as
+   its four rows; below the logo and byline when room is tight. Its size and lettering are set to fit (main.ts). */
 .cover-copy {
   position: fixed;
   z-index: 1;
-  display: grid;
-  grid-template-rows: repeat(4, var(--cover-row));
-  row-gap: var(--cover-gap);
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: var(--cover-pad, 24px);
+  border: 2px solid var(--ink);
+  background: var(--floor);
   color: var(--ink);
-  font: 400 var(--cover-font)/1.4 var(--serif);
+  font: 400 var(--cover-font, 18px)/1.5 var(--sans);
+  animation: cover-copy-in 1.2s ease-out 0.4s both;
+}
+
+.cover-copy[hidden] {
+  display: none;
 }
 
 .cover-copy p {
-  display: flex;
-  align-items: center;
   margin: 0;
-  white-space: nowrap;
-  animation: cover-copy-in 1.2s ease-out both;
-  animation-delay: 0.4s;
+  text-align: justify;
 }
-
-/* After each fade, allow roughly 0.3 seconds per word before the next line begins. */
-.cover-copy p:nth-child(2) { animation-delay: 2.6s; }
-.cover-copy p:nth-child(3) { animation-delay: 5s; }
-.cover-copy p:nth-child(4) { animation-delay: 7.2s; }
 
 @keyframes cover-copy-in {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-.cover-copy.stacked {
-  grid-template-rows: none;
 }
 
 /* Static game context: one quiet control outside the fullscreen app's grid; its text opens upward. */
@@ -1121,6 +1118,78 @@ body {
   outline: 3px solid var(--brown);
 }
 
+/* over a shared yard: what it shows, in its own numbers, and the ways on */
+.shared {
+  position: fixed;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  padding-block: 6px;
+  padding-inline: 4%;
+  background: rgb(251 248 241 / 88%);
+  color: var(--ink);
+  font-family: var(--sans);
+  text-align: center;
+}
+
+.shared[hidden] {
+  display: none;
+}
+
+.shared .shared-said {
+  margin: 0;
+  max-inline-size: 32em;
+  font-size: clamp(0.8rem, 0.55rem + 1.4vmin, 1.4rem);
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.shared .shared-ways {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.shared button {
+  padding: 0.25em 0.7em;
+  border: 1.5px solid var(--brown);
+  border-radius: 0;
+  background: var(--floor);
+  color: var(--brown);
+  font: inherit;
+  font-size: clamp(0.75rem, 0.6rem + 0.8vmin, 1.05rem);
+  cursor: pointer;
+}
+
+.shared button:hover {
+  background: #f6eedb;
+}
+
+.shared .shared-close {
+  border-color: transparent;
+  color: var(--muted);
+}
+
+/* a fork's two ways on, in words, square as every button */
+.strip .fork {
+  padding: 0.4em 0.9em;
+  border: 1.5px solid var(--brown);
+  border-radius: 0;
+  background: var(--floor);
+  color: var(--brown);
+  font: inherit;
+  font-size: clamp(1rem, 0.7rem + 1.5vmin, 1.5rem);
+  cursor: pointer;
+}
+
+.strip .fork:hover {
+  background: #f6eedb;
+}
+
 .sr-only {
   position: absolute;
   inline-size: 1px;
@@ -1434,7 +1503,7 @@ body {
 
 /* the reader asked for less motion: lights hold still, nothing slides */
 @media (prefers-reduced-motion: reduce) {
-  .cover-copy p {
+  .cover-copy {
     animation: none;
   }
 

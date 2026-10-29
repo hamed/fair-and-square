@@ -157,6 +157,8 @@ for (const file of ['', 'index.html']) {
       expect(url.search).toBe(`?fs_share=${source}`);
       await page.goto(url.href);
       await page.waitForFunction(() => (window as any).fns && (window as any).__events?.length);
+      // a shared yard plays its history again first, then is the yard it was
+      await page.waitForFunction(() => !(window as any).fns.replaying());
       expect(await state(page)).toEqual(before);
       expect(await page.evaluate(() => (window as any).__events.find((e: any) => e.name === 'shared_link_open').data))
         .toMatchObject({ source, status: 'loaded' });
